@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, KeyRound, AlertCircle } from 'lucide-react';
@@ -9,18 +8,18 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, session, profile } = useAuth();
+  const { signIn, session, profile, loading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already signed in
   useEffect(() => {
-    console.log('Session:', session);
-    console.log('Profile:', profile);
-    if (session && profile) {
+    console.log('Login component - Session:', session);
+    console.log('Login component - Profile:', profile);
+    console.log('Login component - Loading:', loading);
+    if (!loading && session && profile) {
       console.log('User signed in, redirecting:', { role: profile.role });
       navigate(profile.role === 'admin' ? '/admin' : '/user', { replace: true });
     }
-  }, [session, profile, navigate]);
+  }, [session, profile, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +35,9 @@ const LoginPage = () => {
     try {
       await signIn(email, password);
       console.log('Sign-in successful, waiting for session/profile...');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred. Please try again.';
+      setError(errorMessage);
       console.error('Login error:', err);
       setIsLoading(false);
     }

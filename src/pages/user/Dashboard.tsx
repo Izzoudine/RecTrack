@@ -40,11 +40,11 @@ const UserDashboard = () => {
   }
 
   // Filter recommendations for current user
-  const userRecommendations = recommendations.filter(rec => rec.userId === session.user.id);
+  const userRecommendations = recommendations.filter(rec => rec.userId === session.uid);
 
   // Get department info
-  const userDepartment = profile.departmentid 
-    ? departments.find(dept => dept.id === profile.departmentid) 
+  const userDepartment = profile.departmentId 
+    ? departments.find(dept => dept.id === profile.departmentId) 
     : null;
 
   // Get counts for dashboard stats

@@ -5,8 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { departments } = useAuth();
-  const { signUp } = useAuth();
+  const { departments, signUp } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -15,7 +14,7 @@ const RegisterPage = () => {
     name: '',
     departmentId: '',
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -28,10 +27,9 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError(null);
     setIsLoading(true);
 
-    // Client-side validation
     if (!formData.email || !formData.password || !formData.name || !formData.departmentId) {
       setError('Please fill in all fields');
       setIsLoading(false);
@@ -53,11 +51,10 @@ const RegisterPage = () => {
     try {
       await signUp(formData.email, formData.password, formData.name, formData.departmentId);
       navigate('/login');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during registration');
-      console.error(err);
-    } finally {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during registration';
+      setError(errorMessage);
+      console.error('Registration error:', err);
       setIsLoading(false);
     }
   };

@@ -54,6 +54,7 @@ const AdminDepartments = () => {
       acronym: acronym.toUpperCase(),
       name,
     });
+   
     
     // Close modal and reset form
     closeModal();
