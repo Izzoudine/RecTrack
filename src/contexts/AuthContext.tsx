@@ -193,84 +193,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Fetch departments and users
+  // Fetch departments and users with real-time listeners
   useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        console.log('Fetching departments...');
-        const querySnapshot = await getDocs(collection(db, 'departments'));
-        const deptData = querySnapshot.docs.map(docSnapshot => ({
-          id: docSnapshot.id,
-          ...docSnapshot.data(),
-        })) as Department[];
-        console.log('Departments fetched:', deptData);
-        setDepartments(deptData);
-      } catch (err) {
-        console.error('Error fetching departments:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch departments');
-      }
-    };
+    // Real-time subscription for departments - ONLY use listeners, no initial fetch
+    const deptUnsubscribe = onSnapshot(collection(db, 'departments'), (snapshot) => {
+      console.log('Departments snapshot received');
+      const deptData = snapshot.docs.map(docSnapshot => ({
+        id: docSnapshot.id,
+        ...docSnapshot.data(),
+      })) as Department[];
+      setDepartments(deptData); // Replace entire array with fresh data
+    });
 
-    const fetchUsers = async () => {
-      try {
-        console.log('Fetching users...');
-        const querySnapshot = await getDocs(collection(db, 'users'));
-        const userData = querySnapshot.docs
+    // Real-time subscription for users (only for admins)
+    let userUnsubscribe: (() => void) | undefined;
+    if (profile?.role === 'admin') {
+      userUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+        console.log('Users snapshot received');
+        const userData = snapshot.docs
           .filter(docSnapshot => docSnapshot.data().role === 'user')
           .map(docSnapshot => ({
             id: docSnapshot.id,
             name: docSnapshot.data().name,
             departmentId: docSnapshot.data().departmentId || null,
           }));
-        console.log('Users fetched:', userData);
-        setUsers(userData);
-      } catch (err) {
-        console.error('Error fetching users:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch users');
-      }
-    };
-    if (profile?.role === 'admin') {
-    fetchDepartments();
-    fetchUsers();
-  }
-
-    // Real-time subscriptions
-    const deptUnsubscribe = onSnapshot(collection(db, 'departments'), (snapshot) => {
-      snapshot.docChanges().forEach(change => {
-        const dept = { id: change.doc.id, ...change.doc.data() } as Department;
-        if (change.type === 'added') {
-          setDepartments(prev => [...prev, dept]);
-        } else if (change.type === 'modified') {
-          setDepartments(prev => prev.map(d => (d.id === dept.id ? dept : d)));
-        } else if (change.type === 'removed') {
-          setDepartments(prev => prev.filter(d => d.id !== dept.id));
-        }
+        setUsers(userData); // Replace entire array with fresh data
       });
-    });
+    } else {
+      setUsers([]); // Clear users if not admin
+    }
 
     return () => {
       deptUnsubscribe();
+      if (userUnsubscribe) userUnsubscribe();
     };
-  }, []);
+  }, [profile?.role]); // Only depend on role, not entire profile
 
-  // Fetch recommendations
+  // Fetch recommendations with real-time listener
   useEffect(() => {
     if (!session || !profile) {
-      console.log('No session or profile, skipping recommendations fetch');
+      console.log('No session or profile, clearing recommendations');
+      setRecommendations([]);
       return;
     }
 
-    const fetchRecommendations = async () => {
+    // Real-time subscription for recommendations - ONLY use listener, no initial fetch
+    let recQuery: Query<DocumentData, DocumentData> = collection(db, 'recommendations');
+    if (profile?.role !== 'admin' && session?.uid) {
+      recQuery = query(recQuery, where('userId', '==', session.uid));
+    }
+
+    const recUnsubscribe = onSnapshot(recQuery, async (snapshot) => {
+      console.log('Recommendations snapshot received');
       try {
-        console.log('Fetching recommendations...');
-        // Use a query for non-admins, no query for admins
-        let recQuery: Query<DocumentData, DocumentData> = collection(db, 'recommendations');
-        if (profile?.role !== 'admin' && session?.uid) {
-          recQuery = query(recQuery, where('userId', '==', session.uid));
-        }
-        const querySnapshot = await getDocs(recQuery);
         const recData = await Promise.all(
-          querySnapshot.docs.map(async docSnapshot => {
+          snapshot.docs.map(async docSnapshot => {
             const data = docSnapshot.data() as RecommendationDoc;
             const userDoc = await getDoc(doc(db, 'users', data.userId));
             return {
@@ -286,54 +263,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } as Recommendation;
           })
         );
-    
-        console.log('Fetched recommendations:', recData);
-        setRecommendations(recData);
+
+        // Filter recommendations based on user role and permissions
+        let filteredRecs = recData;
+        if (profile.role !== 'admin') {
+          filteredRecs = recData.filter(
+            rec => rec.userId === session.uid || 
+                   (rec.departmentId && rec.departmentId === profile.departmentId)
+          );
+        }
+
+        console.log('Filtered recommendations:', filteredRecs);
+        setRecommendations(filteredRecs); // Replace entire array with fresh data
+        setError(null); // Clear error on success
       } catch (err) {
-        console.error('Error fetching recommendations:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch recommendations');
+        console.error('Error processing recommendations:', err);
+        setError(err instanceof Error ? err.message : 'Failed to process recommendations');
       }
-    };
-
-    fetchRecommendations();
-
-    // Real-time subscription for recommendations
-    const recUnsubscribe = onSnapshot(collection(db, 'recommendations'), (snapshot) => {
-      const changes = snapshot.docChanges();
-      changes.forEach(change => {
-        const data = change.doc.data() as RecommendationDoc;
-        getDoc(doc(db, 'users', data.userId)).then(userDoc => {
-          const rec = {
-            id: change.doc.id,
-            title: data.content.split('\n')[0] || data.content,
-            description: data.content.split('\n').slice(1).join('\n') || '',
-            userId: data.userId,
-            createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
-            departmentId: data.departmentId || null,
-            deadline: data.deadline || null,
-            status: data.status,
-            completedAt: data.completedAt || undefined,
-          } as Recommendation;
-
-          if (profile.role === 'admin' || rec.userId === session.uid || rec.departmentId === profile.departmentId) {
-            if (change.type === 'added') {
-              setRecommendations(prev => [rec, ...prev]);
-            } else if (change.type === 'modified') {
-              setRecommendations(prev => prev.map(r => (r.id === rec.id ? rec : r)));
-            } else if (change.type === 'removed') {
-              setRecommendations(prev => prev.filter(r => r.id !== rec.id));
-            }
-          }
-        }).catch(err => {
-          console.error('Error fetching user for recommendation:', err);
-        });
-      });
     });
 
     return () => {
       recUnsubscribe();
     };
-  }, [session, profile]);
+  }, [session?.uid, profile?.role, profile?.departmentId]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -358,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = userCredential.user;
       await setDoc(doc(db, 'users', user.uid), {
         id: user.uid,
-        role: 'admin' as const,
+        role: 'user' as const,
         name,
         departmentId: departmentId || null,
       });
@@ -491,8 +443,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const addDepartment = async (department: Omit<Department, 'id'>) => {
     try {
       console.log('Adding department:', department);
-      const docRef = await addDoc(collection(db, 'departments'), department);
-      setDepartments(prev => [...prev, { id: docRef.id, ...department }]);
+      await addDoc(collection(db, 'departments'), department);
+      // Don't manually update state - let the listener handle it
     } catch (err) {
       console.error('Error adding department:', err);
       setError(err instanceof Error ? err.message : 'Failed to add department');

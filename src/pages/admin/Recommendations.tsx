@@ -27,6 +27,9 @@ const AdminRecommendations = () => {
     departmentFilter,
     setDepartmentFilter,
     getFilteredRecommendations,
+    loading,
+   
+    profile,
   } = useAuth();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,20 +44,41 @@ const AdminRecommendations = () => {
     deadline: format(new Date().setDate(new Date().getDate() + 7), 'yyyy-MM-dd'),
   });
   const [formError, setFormError] = useState('');
-  
+
+  // Debug logs
+  console.log('AdminRecommendations - Departments:', departments);
+  console.log('AdminRecommendations - Users:', users);
+  console.log('AdminRecommendations - Filtered Recommendations:', getFilteredRecommendations());
+
+  // Handle non-admin access
+  if (profile?.role !== 'admin') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 text-center py-8">
+        <p className="text-error-700">Access denied: This page is for admins only.</p>
+      </div>
+    );
+  }
+
+  // Handle loading states
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 text-center py-8">
+        <p className="text-gray-600">Loading data...</p>
+      </div>
+    );
+  }
+
   // Handle form input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
   
-  // Filter recommendations based on search term and status
-  const filteredRecommendations = getFilteredRecommendations().filter(rec => 
-    rec.status !== 'completed' && 
-    (searchTerm === '' || 
-      rec.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rec.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  // Filter recommendations based on search term
+  const filteredRecommendations = getFilteredRecommendations().filter(rec =>
+    searchTerm === '' ||
+    rec.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    rec.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   // Submit form
@@ -266,31 +290,39 @@ const AdminRecommendations = () => {
                       <User className="h-4 w-4 mr-1" />
                       Assign User
                     </label>
-                    <select
-                      id="userId"
-                      name="userId"
-                      value={formData.userId}
-                      onChange={handleInputChange}
-                      className="input"
-                    >
-                      <option value="">Select User</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
+                    {users.length === 0 ? (
+                      <p className="text-error-700 text-sm">No users available. Please add users first.</p>
+                    ) : (
+                      <select
+                        id="userId"
+                        name="userId"
+                        value={formData.userId}
+                        onChange={handleInputChange}
+                        className="input"
+                      >
+                        <option value="">Select User</option>
+                        {users.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   
                   <div className="form-group">
                     <label className="label flex items-center">
                       Department
                     </label>
-                    <p className="text-gray-600">
-                      {selectedUserDepartment 
-                        ? `${selectedUserDepartment.acronym} - ${selectedUserDepartment.name}`
-                        : 'Select a user to see their department'}
-                    </p>
+                    {selectedUserDepartment ? (
+                      <p className="text-gray-600">
+                        {selectedUserDepartment.acronym} - {selectedUserDepartment.name}
+                      </p>
+                    ) : formData.userId ? (
+                      <p className="text-error-700 text-sm">No department found for selected user.</p>
+                    ) : (
+                      <p className="text-gray-600">Select a user to see their department</p>
+                    )}
                   </div>
                 </div>
                 
@@ -322,6 +354,7 @@ const AdminRecommendations = () => {
                 <button 
                   type="submit"
                   className="btn btn-primary"
+                  disabled={users.length === 0} // Disable if no users
                 >
                   Add Recommendation
                 </button>

@@ -5,13 +5,11 @@ import { User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 const AdminUsers = () => {
   const { departments, users, getRecommendationsByUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Filter users based on search term
+  console.log("Users",users);
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Helper function to get department name by id
   const getDepartmentName = (departmentId: string | null) => {
     if (!departmentId) return 'No Department';
     const department = departments.find(dept => dept.id === departmentId);

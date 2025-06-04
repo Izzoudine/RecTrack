@@ -17,7 +17,7 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   department?: Department | null;
   userName?: string;
-  onStatusChange?: (id: string, status: Recommendation['status']) => void;
+  onStatusChange?: (id: string, status: Recommendation['status'], completedAt?: string) => void;
   onUpdate?: (id: string, data: Partial<Recommendation>) => void;
   onDelete?: (id: string) => void;
 }
@@ -30,37 +30,46 @@ const RecommendationCard = ({
   onUpdate,
   onDelete
 }: RecommendationCardProps) => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false); // Added for loading state
   const [editData, setEditData] = useState({
     title: recommendation.title,
     description: recommendation.description,
-    deadline: recommendation.deadline
+    deadline: recommendation.deadline ?? ''
   });
   
-  const handleMarkComplete = () => {
+  const handleMarkComplete = async () => {
     if (onStatusChange) {
-      onStatusChange(recommendation.id, 'completed');
+      setIsUpdating(true);
+      try {
+        await onStatusChange(recommendation.id, 'completed', new Date().toISOString());
+      } catch (error) {
+        console.error('Failed to mark as complete:', error);
+      } finally {
+        setIsUpdating(false);
+      }
     }
   };
 
   const handleSave = () => {
-    if (onUpdate && user?.role === 'admin') {
+    if (onUpdate && profile?.role === 'admin') {
       onUpdate(recommendation.id, editData);
     }
     setIsEditing(false);
   };
 
   const handleDelete = () => {
-    if (onDelete && user?.role === 'admin' && window.confirm('Are you sure you want to delete this recommendation?')) {
+    if (onDelete && profile?.role === 'admin' && window.confirm('Are you sure you want to delete this recommendation?')) {
       onDelete(recommendation.id);
     }
   };
   
-  const isOverdue = new Date(recommendation.deadline) < new Date() && 
-                    recommendation.status === 'in_progress';
+  const isOverdue = recommendation.deadline && 
+  new Date(recommendation.deadline) < new Date() && 
+  recommendation.status === 'in_progress';
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = profile?.role === 'admin';
   
   return (
     <div className={`card transition-all duration-300 hover:shadow-md ${
@@ -157,8 +166,11 @@ const RecommendationCard = ({
                   className="input py-0 px-1 text-sm"
                 />
               ) : (
-                <span>Deadline: {format(new Date(recommendation.deadline), 'MMM d, yyyy')}</span>
-              )}
+                <span>
+                Deadline: {recommendation.deadline 
+                  ? format(new Date(recommendation.deadline), 'MMM d, yyyy') 
+                  : 'No deadline set'}
+              </span> )}
             </div>
             
             {userName && (
@@ -177,16 +189,17 @@ const RecommendationCard = ({
           </div>
         </div>
         
-        {user?.role === 'user' && 
+        {profile?.role === 'user' && 
          recommendation.status === 'in_progress' && 
-         recommendation.userId === user.id && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+         recommendation.userId === profile.id && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
             <button 
               onClick={handleMarkComplete}
               className="btn btn-sm btn-success w-full"
+              disabled={isUpdating}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
-              Mark as Complete
+              {isUpdating ? 'Updating...' : 'Mark as Complete'}
             </button>
           </div>
         )}
