@@ -7,7 +7,7 @@ const AuthLayout = () => {
       <header className="bg-white shadow-sm py-4">
         <div className="container mx-auto px-4 flex items-center">
           <div className="flex items-center space-x-2 text-primary-600">
-            <Shield className="h-6 w-6" />
+          <Shield className="h-6 w-6" style={{ stroke: '#00a551' }} />
             <span className="text-xl font-semibold">RecTrack</span>
           </div>
         </div>
@@ -17,23 +17,18 @@ const AuthLayout = () => {
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <div className="flex justify-center mb-4">
-              <div className="bg-primary-600 rounded-full p-4 text-white">
+              <div  className="rounded-full p-4 text-white"style={{ backgroundColor: '#00a551' }}>
                 <UserCheck className="h-10 w-10" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Recommendation Management</h1>
-            <p className="text-gray-600">Tracking and managing recommendations across departments</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Gestion des recommandations</h1>
+            <p className="text-gray-600">Suivi et gestion des recommandations par département</p>
           </div>
           
           <Outlet />
         </div>
       </main>
       
-      <footer className="bg-white py-4 shadow-sm shadow-inner">
-        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          &copy; {new Date().getFullYear()} RecTrack - All rights reserved
-        </div>
-      </footer>
     </div>
   );
 };

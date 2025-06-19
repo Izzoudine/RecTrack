@@ -34,7 +34,8 @@ const UserDashboard = () => {
   if (!profile || !session) {
     return (
       <div className="text-center mt-10 text-error-700">
-        Please sign in to view your dashboard.
+        Veuillez vous connecter pour afficher votre tableau de bord
+
       </div>
     );
   }
@@ -80,37 +81,37 @@ const UserDashboard = () => {
     <div className="max-w-7xl mx-auto px-4">
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Welcome, {profile.name}
+          Bienvenue, {profile.name}
         </h1>
         <p className="text-gray-600">
           {userDepartment 
-            ? `${userDepartment.name} Department` 
-            : 'Your Dashboard'}
+            ? `${userDepartment.name} Département` 
+            : 'Votre tableau de bord'}
         </p>
       </div>
       
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-6xl mx-auto">
         <StatsCard 
-          title="Total Recommendations"
+          title="Recommandations totales"
           value={userRecommendations.length}
           icon={<User className="h-5 w-5" />}
           color="primary"
         />
         <StatsCard 
-          title="In Progress"
+          title="En cours"
           value={inProgressCount}
           icon={<Clock className="h-5 w-5" />}
           color="secondary"
         />
         <StatsCard 
-          title="Completed"
+          title="Terminé"
           value={completedCount}
           icon={<CheckCircle className="h-5 w-5" />}
           color="success"
         />
         <StatsCard 
-          title="Overdue"
+          title="En retard"
           value={overdueCount}
           icon={<AlertTriangle className="h-5 w-5" />}
           color="error"
@@ -135,7 +136,7 @@ const UserDashboard = () => {
           )}
           
           <div className="card p-4">
-            <h3 className="font-bold text-gray-900 mb-2">Completion Progress</h3>
+            <h3 className="font-bold text-gray-900 mb-2">Progression</h3>
             <div className="relative pt-1">
               <div className="overflow-hidden h-4 mb-1 text-xs flex rounded bg-gray-200">
                 <div 
@@ -144,8 +145,8 @@ const UserDashboard = () => {
                 ></div>
               </div>
               <div className="flex justify-between text-xs text-gray-600">
-                <span>Progress</span>
-                <span>{completionRate}% Complete</span>
+                <span>Progression</span>
+                <span>{completionRate}% Compléter                </span>
               </div>
             </div>
           </div>
@@ -155,7 +156,7 @@ const UserDashboard = () => {
       {/* Upcoming Deadlines */}
       <div className="mb-8 max-w-6xl mx-auto">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-          Upcoming Deadlines
+        Échéances à venir
         </h2>
         
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
@@ -170,7 +171,7 @@ const UserDashboard = () => {
           {sortedRecommendations.length === 0 && (
             <div className="col-span-2 p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
               <CheckCircle className="h-12 w-12 text-success-500 mx-auto mb-4" />
-              <p className="text-gray-600">No pending recommendations! Great job!</p>
+              <p className="text-gray-600">Aucune recommandation en attente ! Beau travail !              </p>
             </div>
           )}
         </div>
@@ -180,7 +181,7 @@ const UserDashboard = () => {
       {recentlyCompleted.length > 0 && (
         <div className="max-w-6xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-            Recently Completed
+          Récemment terminé
           </h2>
           
           <div className="bg-gray-50 rounded-lg border border-gray-200">
@@ -197,7 +198,8 @@ const UserDashboard = () => {
                 <div>
                   <h3 className="font-medium text-gray-900">{recommendation.title}</h3>
                   <p className="text-xs text-gray-500">
-                    Completed on {format(new Date(recommendation.completedAt!), 'MMM d, yyyy')}
+                  Terminé le
+                  {format(new Date(recommendation.completedAt!), 'MMM d, yyyy')}
                   </p>
                 </div>
               </div>

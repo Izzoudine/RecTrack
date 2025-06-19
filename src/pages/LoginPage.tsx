@@ -46,7 +46,7 @@ const LoginPage = () => {
   return (
     <div className="card shadow-md animate-fade-in max-w-md w-full mx-auto">
       <div className="p-6">
-        <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">Sign In</h2>
+        <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">Se connecter</h2>
 
         {error && (
           <div className="mb-4 bg-error-50 text-error-700 p-3 rounded-md flex items-center text-sm">
@@ -70,7 +70,7 @@ const LoginPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input pl-10"
-                placeholder="Enter your email"
+                placeholder="Saisissez votre email"
                 autoComplete="email"
               />
             </div>
@@ -78,7 +78,7 @@ const LoginPage = () => {
 
           <div className="form-group">
             <label htmlFor="password" className="label">
-              Password
+              Mot de passe
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -90,7 +90,7 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input pl-10"
-                placeholder="Enter your password"
+                placeholder="Saisissez votre mot de passe"
                 autoComplete="current-password"
               />
             </div>
@@ -102,16 +102,16 @@ const LoginPage = () => {
               className="btn btn-primary w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+         {isLoading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
           </div>
         </form>
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+          Vous n'avez pas de compte?{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign up
+            S'inscrire
             </Link>
           </p>
         </div>

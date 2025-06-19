@@ -1,19 +1,20 @@
-import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Building2, Plus, X } from 'lucide-react';
+import { useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { Building2, Plus, X } from "lucide-react";
 
 const AdminDepartments = () => {
-  const { departments, addDepartment, getRecommendationsByDepartment } = useAuth();
-  
+  const { departments, addDepartment, getRecommendationsByDepartment } =
+    useAuth();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [acronym, setAcronym] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [acronym, setAcronym] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
 
   const resetForm = () => {
-    setAcronym('');
-    setName('');
-    setError('');
+    setAcronym("");
+    setName("");
+    setError("");
   };
 
   const openModal = () => {
@@ -27,35 +28,34 @@ const AdminDepartments = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!acronym || !name) {
-      setError('Please provide both acronym and name');
+      setError("Please provide both acronym and name");
       return;
     }
-    
+
     if (acronym.length > 5) {
-      setError('Acronym should be 5 characters or less');
+      setError("Acronym should be 5 characters or less");
       return;
     }
-    
+
     // Check for duplicates
     const isDuplicateAcronym = departments.some(
-      dept => dept.acronym.toLowerCase() === acronym.toLowerCase()
+      (dept) => dept.acronym.toLowerCase() === acronym.toLowerCase()
     );
-    
+
     if (isDuplicateAcronym) {
-      setError('A department with this acronym already exists');
+      setError("A department with this acronym already exists");
       return;
     }
-    
+
     // Add department
     addDepartment({
       acronym: acronym.toUpperCase(),
       name,
     });
-   
-    
+
     // Close modal and reset form
     closeModal();
     resetForm();
@@ -65,53 +65,69 @@ const AdminDepartments = () => {
     <div>
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Departments</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Départements
+          </h1>
           <p className="text-gray-600">
-            Manage departments across the organization
+            Gérer les départements de l'organisation
           </p>
         </div>
-        <button 
+        <button
           onClick={openModal}
-          className="btn btn-primary"
+          className="btn"
+          style={{ backgroundColor: "#00a551", color: "white" }}
         >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Department
+          <Plus className="h-4 w-4 mr-1" style={{ stroke: "white" }} />
+          Ajouter un département
         </button>
       </div>
-      
+
       {/* Departments Grid */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {departments.map((department) => {
-          const deptRecommendations = getRecommendationsByDepartment(department.id);
-          const completedCount = deptRecommendations.filter(r => r.status === 'completed').length;
-          const completionRate = deptRecommendations.length > 0
-            ? Math.round((completedCount / deptRecommendations.length) * 100)
-            : 0;
-            
+          const deptRecommendations = getRecommendationsByDepartment(
+            department.id
+          );
+          const completedCount = deptRecommendations.filter(
+            (r) => r.status === "completed"
+          ).length;
+          const completionRate =
+            deptRecommendations.length > 0
+              ? Math.round((completedCount / deptRecommendations.length) * 100)
+              : 0;
+
           return (
-            <div 
-              key={department.id} 
+            <div
+              key={department.id}
               className="card hover:shadow-md transition-shadow duration-300"
             >
               <div className="p-4">
                 <div className="flex items-center mb-4">
-                  <div className="bg-primary-100 rounded-full p-2 mr-3 text-primary-700">
+                  <div
+                    className="rounded-full p-2 mr-3"
+                    style={{ backgroundColor: "#d1fae5", color: "#00a551" }}
+                  >
                     <Building2 className="h-5 w-5" />
                   </div>
+
                   <div>
-                    <h3 className="font-bold text-gray-900">{department.acronym}</h3>
+                    <h3 className="font-bold text-gray-900">
+                      {department.acronym}
+                    </h3>
                     <p className="text-sm text-gray-600">{department.name}</p>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-100 pt-3">
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="bg-gray-50 p-2 rounded">
-                      <p className="text-xs text-gray-500">Recommendations</p>
-                      <p className="text-lg font-semibold">{deptRecommendations.length}</p>
+                      <p className="text-xs text-gray-500">Recommandations</p>
+                      <p className="text-lg font-semibold">
+                        {deptRecommendations.length}
+                      </p>
                     </div>
                     <div className="bg-gray-50 p-2 rounded">
-                      <p className="text-xs text-gray-500">Completion</p>
+                      <p className="text-xs text-gray-500">Achèvement</p>
                       <p className="text-lg font-semibold">{completionRate}%</p>
                     </div>
                   </div>
@@ -121,17 +137,14 @@ const AdminDepartments = () => {
           );
         })}
       </div>
-      
+
       {departments.length === 0 && (
         <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
           <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">No departments found</p>
-          <button 
-            onClick={openModal}
-            className="btn btn-primary"
-          >
+          <p className="text-gray-500 mb-4">Aucun département trouvé</p>
+          <button onClick={openModal} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-1" />
-            Add Department
+            Ajouter un département
           </button>
         </div>
       )}
@@ -141,15 +154,17 @@ const AdminDepartments = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
             <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">Add New Department</h3>
-              <button 
+              <h3 className="text-lg font-semibold">
+                Ajouter un nouveau département
+              </h3>
+              <button
                 onClick={closeModal}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
               <div className="p-4">
                 {error && (
@@ -157,10 +172,10 @@ const AdminDepartments = () => {
                     {error}
                   </div>
                 )}
-                
+
                 <div className="form-group">
                   <label htmlFor="acronym" className="label">
-                    Acronym (max 5 characters)
+                    Acronyme (5 caractères max)
                   </label>
                   <input
                     id="acronym"
@@ -172,10 +187,10 @@ const AdminDepartments = () => {
                     maxLength={5}
                   />
                 </div>
-                
+
                 <div className="form-group">
                   <label htmlFor="name" className="label">
-                    Department Name
+                    Nom du département
                   </label>
                   <input
                     id="name"
@@ -187,20 +202,17 @@ const AdminDepartments = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end space-x-2">
-                <button 
+                <button
                   type="button"
                   onClick={closeModal}
                   className="btn btn-outline"
                 >
-                  Cancel
+                  Annuler
                 </button>
-                <button 
-                  type="submit"
-                  className="btn btn-primary"
-                >
-                  Add Department
+                <button type="submit" className="btn btn-primary">
+                  Ajouter un département
                 </button>
               </div>
             </form>

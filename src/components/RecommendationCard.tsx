@@ -60,7 +60,7 @@ const RecommendationCard = ({
   };
 
   const handleDelete = () => {
-    if (onDelete && profile?.role === 'admin' && window.confirm('Are you sure you want to delete this recommendation?')) {
+    if (onDelete && profile?.role === 'admin' && window.confirm('Êtes-vous sûr de vouloir supprimer cette recommandation ?')) {
       onDelete(recommendation.id);
     }
   };
@@ -83,7 +83,7 @@ const RecommendationCard = ({
               value={editData.title}
               onChange={(e) => setEditData({ ...editData, title: e.target.value })}
               className="input mb-2"
-              placeholder="Recommendation title"
+              placeholder="Titre de la recommandation"
             />
           ) : (
             <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -99,14 +99,14 @@ const RecommendationCard = ({
                     <button 
                       onClick={handleSave}
                       className="p-1 text-success-600 hover:text-success-700"
-                      title="Save changes"
+                      title="Enregistrer les modifications"
                     >
                       <Save className="h-4 w-4" />
                     </button>
                     <button 
                       onClick={() => setIsEditing(false)}
                       className="p-1 text-gray-600 hover:text-gray-700"
-                      title="Cancel editing"
+                      title="Annuler l'édition"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -116,14 +116,14 @@ const RecommendationCard = ({
                     <button 
                       onClick={() => setIsEditing(true)}
                       className="p-1 text-primary-600 hover:text-primary-700"
-                      title="Edit recommendation"
+                      title="Modifier la recommandation"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button 
                       onClick={handleDelete}
                       className="p-1 text-error-600 hover:text-error-700"
-                      title="Delete recommendation"
+                      title="Supprimer la recommandation"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -145,7 +145,7 @@ const RecommendationCard = ({
             value={editData.description}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             className="input mb-3"
-            placeholder="Recommendation description"
+            placeholder="Description de la recommandation"
             rows={3}
           />
         ) : (
@@ -167,7 +167,7 @@ const RecommendationCard = ({
                 />
               ) : (
                 <span>
-                Deadline: {recommendation.deadline 
+                Date limite: {recommendation.deadline 
                   ? format(new Date(recommendation.deadline), 'MMM d, yyyy') 
                   : 'No deadline set'}
               </span> )}
@@ -176,14 +176,14 @@ const RecommendationCard = ({
             {userName && (
               <div className="w-full sm:w-1/2 flex items-center text-sm text-gray-500">
                 <Info className="h-4 w-4 mr-1 text-gray-400" />
-                <span>Assigned to: {userName}</span>
+                <span>Assigné à : {userName}</span>
               </div>
             )}
             
             {recommendation.completedAt && (
               <div className="w-full sm:w-1/2 flex items-center text-sm text-success-600">
                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                <span>Completed: {format(new Date(recommendation.completedAt), 'MMM d, yyyy')}</span>
+                <span>Terminé: {format(new Date(recommendation.completedAt), 'MMM d, yyyy')}</span>
               </div>
             )}
           </div>
@@ -199,7 +199,7 @@ const RecommendationCard = ({
               disabled={isUpdating}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
-              {isUpdating ? 'Updating...' : 'Mark as Complete'}
+              {isUpdating ? 'Mise à jour...' : 'Marquer comme terminé'}
             </button>
           </div>
         )}

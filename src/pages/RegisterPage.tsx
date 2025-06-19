@@ -31,19 +31,19 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     if (!formData.email || !formData.password || !formData.name || !formData.departmentId) {
-      setError('Please fill in all fields');
+      setError('Veuillez remplir tous les champs');
       setIsLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Les mots de passe ne correspondent pas');
       setIsLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError('Le mot de passe doit contenir au moins 6 caractères');
       setIsLoading(false);
       return;
     }
@@ -62,7 +62,7 @@ const RegisterPage = () => {
   return (
     <div className="card shadow-md animate-fade-in max-w-md w-full mx-auto">
       <div className="p-6">
-        <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">Create Account</h2>
+        <h2 className="text-center text-2xl font-bold text-gray-900 mb-6">Créer un compte</h2>
 
         {error && (
           <div className="mb-4 bg-error-50 text-error-700 p-3 rounded-md flex items-center text-sm">
@@ -74,7 +74,7 @@ const RegisterPage = () => {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="name" className="label">
-              Full Name
+            Nom Complet
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -87,7 +87,7 @@ const RegisterPage = () => {
                 value={formData.name}
                 onChange={handleChange}
                 className="input pl-10"
-                placeholder="Enter your full name"
+                placeholder="Saisissez votre nom complet"
                 autoComplete="name"
               />
             </div>
@@ -108,7 +108,7 @@ const RegisterPage = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className="input pl-10"
-                placeholder="Enter your email"
+                placeholder="Saisissez votre email"
                 autoComplete="email"
               />
             </div>
@@ -116,7 +116,7 @@ const RegisterPage = () => {
 
           <div className="form-group">
             <label htmlFor="departmentId" className="label">
-              Department
+            Département
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -129,7 +129,7 @@ const RegisterPage = () => {
                 onChange={handleChange}
                 className="input pl-10"
               >
-                <option value="">Select Department</option>
+                <option value="">Sélectionnez un département                </option>
                 {departments.map(dept => (
                   <option key={dept.id} value={dept.id}>
                     {dept.name} ({dept.acronym})
@@ -141,7 +141,7 @@ const RegisterPage = () => {
 
           <div className="form-group">
             <label htmlFor="password" className="label">
-              Password
+              Mot de passe
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -154,7 +154,7 @@ const RegisterPage = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="input pl-10"
-                placeholder="Create a password"
+                placeholder="Créer un mot de passe"
                 autoComplete="new-password"
               />
             </div>
@@ -162,7 +162,7 @@ const RegisterPage = () => {
 
           <div className="form-group">
             <label htmlFor="confirmPassword" className="label">
-              Confirm Password
+            Confirmez le mot de passe
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -175,7 +175,7 @@ const RegisterPage = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 className="input pl-10"
-                placeholder="Confirm your password"
+                placeholder="Confirmez le mot de passe"
                 autoComplete="new-password"
               />
             </div>
@@ -187,16 +187,15 @@ const RegisterPage = () => {
               className="btn btn-primary w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </button>
+           {isLoading ? 'Création du compte...' : 'Créer un compte'}            </button>
           </div>
         </form>
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+          Vous avez déjà un compte ?{' '}
             <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign in
+            Se connecter
             </Link>
           </p>
         </div>

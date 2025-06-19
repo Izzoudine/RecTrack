@@ -44,9 +44,9 @@ const UserRecommendations = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Recommendations</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Mes recommandations        </h1>
         <p className="text-gray-600">
-          View and manage all your assigned recommendations
+        Afficher et gérer toutes vos recommandations attribuées
         </p>
       </div>
       
@@ -79,7 +79,7 @@ const UserRecommendations = () => {
               onClick={() => setStatusFilter('all')}
               className="text-xs text-gray-500 hover:text-gray-700"
             >
-              Clear Filters
+              Réinitialiser les filtres
             </button>
           )}
         </div>
@@ -109,8 +109,8 @@ const UserRecommendations = () => {
       {filteredRecommendations.length === 0 && (
         <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
           <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-2">No recommendations found</p>
-          <p className="text-sm text-gray-400">Try adjusting your filters or search term</p>
+          <p className="text-gray-500 mb-2">Aucune recommandation trouvée          </p>
+          <p className="text-sm text-gray-400">Essayez de modifier vos filtres ou votre terme de recherche          </p>
         </div>
       )}
     </div>

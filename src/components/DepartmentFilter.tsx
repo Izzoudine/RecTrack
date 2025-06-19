@@ -14,7 +14,7 @@ const DepartmentFilter = ({
   return (
     <div className="form-group">
       <label htmlFor="department-filter" className="label">
-        Filter by Department
+      Filtrer par département
       </label>
       <select
         id="department-filter"
@@ -22,7 +22,7 @@ const DepartmentFilter = ({
         onChange={(e) => onDepartmentChange(e.target.value)}
         className="input"
       >
-        <option value="all">All Departments</option>
+        <option value="all">Tous les départements</option>
         {departments.map((department) => (
           <option key={department.id} value={department.id}>
             {department.acronym} - {department.name}

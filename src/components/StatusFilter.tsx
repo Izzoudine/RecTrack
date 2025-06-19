@@ -7,10 +7,10 @@ interface StatusFilterProps {
 
 const StatusFilter = ({ currentStatus, onStatusChange }: StatusFilterProps) => {
   const statuses: { value: Recommendation['status'] | 'all'; label: string }[] = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'overdue', label: 'Overdue' },
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'in_progress', label: 'En cours' },
+    { value: 'completed', label: 'Terminé' },
+    { value: 'overdue', label: 'En retard' },
   ];
   
   return (

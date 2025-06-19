@@ -14,14 +14,15 @@ const UserLayout = () => {
   };
 
   const navItems = [
-    { to: '/user', icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard' },
-    { to: '/user/recommendations', icon: <Clipboard className="h-5 w-5" />, label: 'Recommendations' },
+    { to: '/user', icon: <LayoutDashboard className="h-5 w-5" />, label: 'Tableau de bord' },
+    { to: '/user/recommendations', icon: <Clipboard className="h-5 w-5" />, label: 'Recommandations' },
   ];
 
   const navClasses = {
-    active: "bg-secondary-700 text-white",
-    inactive: "text-secondary-100 hover:bg-secondary-700/50 hover:text-white"
+    active: "bg-[#1564b1] text-white",
+    inactive: "text-[#a0c4ff] hover:bg-[#1564b1]/50 hover:text-white"
   };
+  
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
@@ -29,7 +30,7 @@ const UserLayout = () => {
       <header className="bg-secondary-800 py-4 md:hidden">
         <div className="px-4 flex justify-between items-center">
           <div className="flex items-center space-x-2 text-white">
-            <Shield className="h-6 w-6" />
+          <Shield className="h-6 w-6" style={{ stroke: '#00a551' }} />
             <span className="text-xl font-semibold">RecTrack</span>
           </div>
           <button 
@@ -49,13 +50,13 @@ const UserLayout = () => {
       >
         <div className="p-4">
           <div className="flex items-center space-x-2 text-white mb-6 pt-2 md:pt-6">
-            <Shield className="h-8 w-8" />
+          <Shield className="h-6 w-6" style={{ stroke: '#00a551' }} />
             <span className="text-xl font-bold">RecTrack</span>
           </div>
           
           <div className="mb-8">
             <div className="px-4 py-2 text-sm text-secondary-100 uppercase font-semibold">
-              User Portal
+            Portail utilisateur
             </div>
           </div>
           
@@ -87,16 +88,20 @@ const UserLayout = () => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-white">{profile?.name}</p>
-              <p className="text-xs font-medium text-secondary-200">User</p>
+              <p className="text-xs font-medium text-secondary-200">Utilisateur</p>
             </div>
           </div>
           <button
-            onClick={handleLogout}
-            className="mt-2 flex items-center w-full px-4 py-2 text-sm font-medium text-secondary-100 rounded-md hover:bg-secondary-700 hover:text-white transition-colors"
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Logout
-          </button>
+  onClick={handleLogout}
+  className="mt-2 flex items-center w-full px-4 py-2 text-sm font-medium rounded-md transition-colors"
+  style={{ color: '#a0c4ff' }} // lighter blue text similar to secondary-100
+  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(21, 100, 177, 0.5)'} // #1564b1 at 50% opacity
+  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+>
+  <LogOut className="h-5 w-5 mr-3" style={{ stroke: '#1564b1' }} />
+  Déconnexion
+</button>
+
         </div>
       </aside>
       

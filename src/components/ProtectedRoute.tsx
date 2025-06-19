@@ -12,7 +12,7 @@ function ProtectedRoute({ children, allowedRoles}: ProtectedRouteProps) {
   const { session, profile, loading } = useAuth();
 
   if (loading) {
-    return <div className="p-6 text-center">Loading...</div>;
+    return <div className="p-6 text-center">Chargement...</div>;
   }
 
   if (!session || !profile) {

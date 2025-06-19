@@ -11,15 +11,15 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   switch (status) {
     case 'in_progress':
       badgeClass = 'badge-primary';
-      label = 'In Progress';
+      label = 'En cours';
       break;
     case 'completed':
       badgeClass = 'badge-success';
-      label = 'Completed';
+      label = 'Terminé';
       break;
     case 'overdue':
       badgeClass = 'badge-error';
-      label = 'Overdue';
+      label = 'En retard';
       break;
     default:
       badgeClass = 'badge-secondary';
