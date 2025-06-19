@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, UserCheck, Shield } from 'lucide-react';
+import { UserCheck, Shield } from 'lucide-react';
 
 const AuthLayout = () => {
   return (

@@ -1,4 +1,4 @@
-import { Recommendation } from '../contexts/RecommendationsContext';
+import { Recommendation } from '../contexts/AuthContext';
 
 interface StatusBadgeProps {
   status: Recommendation['status'];

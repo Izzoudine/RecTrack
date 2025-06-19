@@ -14,10 +14,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-const AdminRecommendations = () => {
+const ChiefRecommendations = () => {
   const {
     departments,
-    users,
+    chiefUsers,
     addRecommendation,
     updateRecommendation,
     deleteRecommendation,
@@ -26,7 +26,7 @@ const AdminRecommendations = () => {
     setStatusFilter,
     departmentFilter,
     setDepartmentFilter,
-    getFilteredRecommendations,
+    getFilteredChiefRecommendations,
     loading,
 
     profile,
@@ -49,15 +49,14 @@ const AdminRecommendations = () => {
   const [formError, setFormError] = useState("");
 
   // Debug logs
-  console.log("AdminRecommendations - Departments:", departments);
-  console.log("AdminRecommendations - Users:", users);
+  console.log("ChiefRecommendations - Departments:", departments);
+  console.log("ChiefRecommendations - Users:", chiefUsers);
   console.log(
     "AdminRecommendations - Filtered Recommendations:",
-    getFilteredRecommendations()
+    getFilteredChiefRecommendations()
   );
 
-  // Handle non-admin access
-  if (profile?.role !== "admin") {
+  if (profile?.role !== "admin" && profile?.role !== "chief") {
     return (
       <div className="max-w-7xl mx-auto px-4 text-center py-8">
         <p className="text-error-700">
@@ -87,7 +86,7 @@ const AdminRecommendations = () => {
   };
 
   // Filter recommendations based on search term
-  const filteredRecommendations = getFilteredRecommendations().filter(
+  const filteredRecommendations = getFilteredChiefRecommendations().filter(
     (rec) =>
       searchTerm === "" ||
       rec.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -110,7 +109,7 @@ const AdminRecommendations = () => {
     }
 
     // Get user's departmentId
-    const selectedUser = users.find((user) => user.id === formData.userId);
+    const selectedUser = chiefUsers.find((user) => user.id === formData.userId);
     if (!selectedUser) {
       setFormError("Utilisateur sélectionné invalide");
       return;
@@ -153,14 +152,14 @@ const AdminRecommendations = () => {
 
   // Helper function to get user name by id
   const getUserNameById = (id: string) => {
-    const user = users.find((u: { id: string }) => u.id === id);
+    const user = chiefUsers.find((u: { id: string }) => u.id === id);
     return user ? user.name : "Utilisateur inconnu";
   };
 
   // Get selected user's department for display
   const selectedUserDepartment = formData.userId
     ? getDepartmentById(
-        users.find((user) => user.id === formData.userId)?.departmentId
+      chiefUsers.find((user) => user.id === formData.userId)?.departmentId
       )
     : null;
 
@@ -323,7 +322,7 @@ const AdminRecommendations = () => {
                       <User className="h-4 w-4 mr-1" />
                       Attribuer à un utilisateur
                     </label>
-                    {users.length === 0 ? (
+                    {chiefUsers.length === 0 ? (
                       <p className="text-error-700 text-sm">
                         Aucun utilisateur disponible. Veuillez d'abord ajouter
                         des utilisateurs.
@@ -337,7 +336,7 @@ const AdminRecommendations = () => {
                         className="input"
                       >
                         <option value="">Sélectionnez un utilisateur </option>
-                        {users.map((user) => (
+                        {chiefUsers.map((user) => (
                           <option key={user.id} value={user.id}>
                             {user.name}
                           </option>
@@ -396,7 +395,7 @@ const AdminRecommendations = () => {
                   type="submit"
                   className="btn"
                   style={{ backgroundColor: "#00a551", color: "white" }}
-                  disabled={users.length === 0} // Disable if no users
+                  disabled={chiefUsers.length === 0} // Disable if no users
                 >
                   Ajouter une recommandation
                 </button>
@@ -409,4 +408,4 @@ const AdminRecommendations = () => {
   );
 };
 
-export default AdminRecommendations;
+export default ChiefRecommendations;

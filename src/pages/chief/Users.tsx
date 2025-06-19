@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 
-const AdminUsers = () => {
-  const { departments, users, getRecommendationsByUser } = useAuth();
+const ChiefUsers = () => {
+  const { departments, chiefUsers, getRecommendationsByUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  console.log("Users",users);
-  const filteredUsers = users.filter(user =>
+  console.log("ChiefUsers",chiefUsers);
+  const filteredUsers = chiefUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -19,7 +19,7 @@ const AdminUsers = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Utilisateurs        </h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Utilisateurs</h1>
         <p className="text-gray-600">
         Gérez les utilisateurs et leurs affectations de recommandations
         </p>
@@ -107,4 +107,4 @@ const AdminUsers = () => {
   );
 };
 
-export default AdminUsers;
+export default ChiefUsers;

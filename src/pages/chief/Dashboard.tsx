@@ -4,20 +4,20 @@ import StatsCard from '../../components/StatsCard';
 import { ClipboardList, Clock, CheckCircle, AlertTriangle, Building2, Users } from 'lucide-react';
 import RecommendationCard from '../../components/RecommendationCard';
 
-const AdminDashboard = () => {
+const ChiefDashboard = () => {
   const { 
-    recommendations, 
+    chiefRecommendations,
     departments, 
-    users,
+    chiefUsers,
     getRecommendationsByStatus 
   } = useAuth();
   
   const [recentRecommendations, setRecentRecommendations] = useState(
-    recommendations.filter(rec => rec.status !== 'completed').slice(0, 5)
+    chiefRecommendations.filter(rec => rec.status !== 'completed').slice(0, 5)
   );
   
   // Get counts for dashboard stats
-  const totalRecommendations = recommendations.length;
+  const totalRecommendations = chiefRecommendations.length;
   const completedCount = getRecommendationsByStatus('completed').length;
   const inProgressCount = getRecommendationsByStatus('in_progress').length;
   const overdueCount = getRecommendationsByStatus('overdue').length;
@@ -30,13 +30,14 @@ const AdminDashboard = () => {
   
   // Sort recommendations by deadline (most recent first)
   useEffect(() => {
-    const sorted = [...recommendations]
+    const sorted = [...chiefRecommendations]
       .filter(rec => rec.status !== 'completed')
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 5);
     
     setRecentRecommendations(sorted);
-  }, [recommendations]);
+  }, [chiefRecommendations]);
+  console.log("Therecommendations",chiefRecommendations)
   
   // Helper function to get department by id
   const getDepartmentById = (id: string) => {
@@ -45,14 +46,14 @@ const AdminDashboard = () => {
   
   // Helper function to get user name by id
   const getUserNameById = (id: string) => {
-    const user = users.find(u => u.id === id);
+    const user = chiefUsers.find(u => u.id === id);
     return user ? user.name : 'Unknown User';
   };
   
   return (
     <div className="max-w-7xl mx-auto px-4">
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tableau de bord administrateur</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tableau de bord chef Département</h1>
         <p className="text-gray-600">
         Suivez et gérez toutes les recommandations des départements
         </p>
@@ -125,4 +126,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default ChiefDashboard;

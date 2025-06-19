@@ -1,4 +1,4 @@
-import { Department } from '../contexts/RecommendationsContext';
+import { Department } from '../contexts/AuthContext';
 
 interface DepartmentFilterProps {
   departments: Department[];

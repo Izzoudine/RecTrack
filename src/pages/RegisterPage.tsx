@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, KeyRound, AlertCircle, Building2 } from 'lucide-react';
+import { User, KeyRound, AlertCircle, Building2, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
@@ -13,6 +13,7 @@ const RegisterPage = () => {
     confirmPassword: '',
     name: '',
     departmentId: '',
+    userType: '', // New field for user type
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +31,7 @@ const RegisterPage = () => {
     setError(null);
     setIsLoading(true);
 
-    if (!formData.email || !formData.password || !formData.name || !formData.departmentId) {
+    if (!formData.email || !formData.password || !formData.name || !formData.departmentId || !formData.userType) {
       setError('Veuillez remplir tous les champs');
       setIsLoading(false);
       return;
@@ -49,7 +50,7 @@ const RegisterPage = () => {
     }
 
     try {
-      await signUp(formData.email, formData.password, formData.name, formData.departmentId);
+      await signUp(formData.email, formData.password, formData.name, formData.departmentId, formData.userType);
       navigate('/login');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during registration';
@@ -115,6 +116,28 @@ const RegisterPage = () => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="userType" className="label">
+              Type d'utilisateur
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Shield className="h-5 w-5" />
+              </div>
+              <select
+                id="userType"
+                name="userType"
+                value={formData.userType}
+                onChange={handleChange}
+                className="input pl-10"
+              >
+                <option value="">Sélectionnez le type d'utilisateur</option>
+                <option value="user">Utilisateur</option>
+                <option value="department_head">Chef de département</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="departmentId" className="label">
             Département
             </label>
@@ -129,7 +152,7 @@ const RegisterPage = () => {
                 onChange={handleChange}
                 className="input pl-10"
               >
-                <option value="">Sélectionnez un département                </option>
+                <option value="">Sélectionnez un département</option>
                 {departments.map(dept => (
                   <option key={dept.id} value={dept.id}>
                     {dept.name} ({dept.acronym})

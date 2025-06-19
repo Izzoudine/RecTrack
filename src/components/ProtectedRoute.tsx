@@ -4,11 +4,11 @@ import { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles: ('admin' | 'user')[];
-  requireDepartment?: boolean;
+  allowedRoles: ('admin' | 'user' | 'chief')[];
+  requireDepartment?: boolean; // currently unused
 }
 
-function ProtectedRoute({ children, allowedRoles}: ProtectedRouteProps) {
+function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { session, profile, loading } = useAuth();
 
   if (loading) {
@@ -19,15 +19,22 @@ function ProtectedRoute({ children, allowedRoles}: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // Ensure role is 'admin' or 'user'
-  const userRole = profile.role as 'admin' | 'user';
+  // Ensure role is one of the allowed roles
+  const userRole = profile.role as 'admin' | 'user' | 'chief';
 
   if (!allowedRoles.includes(userRole)) {
-    // Redirect to default page based on role
-    return <Navigate to={userRole === 'admin' ? '/admin' : '/user'} replace />;
+    // Redirect based on role or fallback to login
+    switch (userRole) {
+      case 'admin':
+        return <Navigate to="/admin" replace />;
+      case 'user':
+        return <Navigate to="/user" replace />;
+      case 'chief':
+        return <Navigate to="/chief" replace />;
+      default:
+        return <Navigate to="/login" replace />;
+    }
   }
-
-  
 
   return <>{children}</>;
 }

@@ -53,14 +53,14 @@ const RecommendationCard = ({
   };
 
   const handleSave = () => {
-    if (onUpdate && profile?.role === 'admin') {
+    if (onUpdate && isAdmin) {
       onUpdate(recommendation.id, editData);
     }
     setIsEditing(false);
   };
 
   const handleDelete = () => {
-    if (onDelete && profile?.role === 'admin' && window.confirm('Êtes-vous sûr de vouloir supprimer cette recommandation ?')) {
+    if (onDelete && isAdmin && window.confirm('Êtes-vous sûr de vouloir supprimer cette recommandation ?')) {
       onDelete(recommendation.id);
     }
   };
@@ -69,7 +69,8 @@ const RecommendationCard = ({
   new Date(recommendation.deadline) < new Date() && 
   recommendation.status === 'in_progress';
 
-  const isAdmin = profile?.role === 'admin';
+  // Fixed: Properly check for both admin and chief roles
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'chief';
   
   return (
     <div className={`card transition-all duration-300 hover:shadow-md ${

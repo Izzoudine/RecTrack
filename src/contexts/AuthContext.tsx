@@ -18,7 +18,7 @@ import {
   doc,
   getDoc,
   setDoc,
-  getDocs,
+ // getDocs,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -61,14 +61,14 @@ export type RecommendationResponse = {
 
 interface Profile {
   id: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'chief';
   departmentId: string | null;
   name: string;
 }
 
 interface UserDoc {
   id: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'chief';
   name: string;
   departmentId: string | null;
 }
@@ -88,10 +88,12 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, departmentId: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, departmentId: string, userType:string) => Promise<void>;
   signOut: () => Promise<void>;
   recommendations: Recommendation[];
+  chiefRecommendations: Recommendation[];
   users: { id: string; name: string; departmentId: string | null }[];
+  chiefUsers: { id: string; name: string; departmentId: string | null }[];
   addRecommendation: (recommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy'>) => Promise<RecommendationResponse>;
   updateRecommendation: (id: string, data: Partial<Recommendation>) => Promise<void>;
   deleteRecommendation: (id: string) => Promise<void>;
@@ -99,12 +101,14 @@ interface AuthContextType {
   getRecommendationsByDepartment: (departmentId: string) => Recommendation[];
   getRecommendationsByStatus: (status: Recommendation['status']) => Recommendation[];
   getRecommendationsByUser: (userId: string) => Recommendation[];
+  getChiefRecommendationsByDepartment: (departmentId: string) => Recommendation[];
   addDepartment: (department: Omit<Department, 'id'>) => Promise<void>;
   statusFilter: Recommendation['status'] | 'all';
   setStatusFilter: (status: Recommendation['status'] | 'all') => void;
   departmentFilter: string | 'all';
   setDepartmentFilter: (departmentId: string | 'all') => void;
   getFilteredRecommendations: () => Recommendation[];
+  getFilteredChiefRecommendations: () => Recommendation[];
   error: string | null;
 }
 
@@ -115,7 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [chiefRecommendations, setChiefRecommendations] = useState<Recommendation[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string; departmentId: string | null }[]>([]);
+  const [chiefUsers, setChiefUsers] = useState<{ id: string; name: string; departmentId: string | null }[]>([]);
   const [statusFilter, setStatusFilter] = useState<Recommendation['status'] | 'all'>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string | 'all'>('all');
   const [loading, setLoading] = useState(true);
@@ -223,17 +229,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUsers([]); // Clear users if not admin
     }
 
+    // Real-time subscription for chief users (users in the same department as the chief)
+    let chiefUserUnsubscribe: (() => void) | undefined;
+    if (profile?.role === 'chief' && profile?.departmentId) {
+      const chiefUserQuery = query(
+        collection(db, 'users'),
+        where('departmentId', '==', profile.departmentId)
+      );
+      
+      chiefUserUnsubscribe = onSnapshot(chiefUserQuery, (snapshot) => {
+        console.log('Chief users snapshot received for department:', profile.departmentId);
+        const chiefUserData = snapshot.docs
+          .filter(docSnapshot => {
+            const userData = docSnapshot.data();
+            // Include users and other chiefs from the same department, but exclude the current chief
+            return (userData.role === 'user' || userData.role === 'chief') && 
+                   docSnapshot.id !== profile.id;
+          })
+          .map(docSnapshot => ({
+            id: docSnapshot.id,
+            name: docSnapshot.data().name,
+            departmentId: docSnapshot.data().departmentId || null,
+          }));
+        setChiefUsers(chiefUserData);
+      });
+    } else {
+      setChiefUsers([]); // Clear chief users if not chief or no department
+    }
+
     return () => {
       deptUnsubscribe();
       if (userUnsubscribe) userUnsubscribe();
+      if (chiefUserUnsubscribe) chiefUserUnsubscribe();
     };
-  }, [profile?.role]); // Only depend on role, not entire profile
+  }, [profile?.role, profile?.departmentId, profile?.id]); // Added profile?.id to dependencies
 
   // Fetch recommendations with real-time listener
   useEffect(() => {
     if (!session || !profile) {
       console.log('No session or profile, clearing recommendations');
       setRecommendations([]);
+      setChiefRecommendations([]);
       return;
     }
 
@@ -287,6 +323,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [session?.uid, profile?.role, profile?.departmentId]);
 
+  // Fetch chief recommendations based on department
+  useEffect(() => {
+    if (!session || !profile || profile.role !== 'chief' || !profile.departmentId) {
+      console.log('Not a chief or no department, clearing chief recommendations');
+      setChiefRecommendations([]);
+      return;
+    }
+
+    // Real-time subscription for chief recommendations - filter by department
+    const chiefRecQuery = query(
+      collection(db, 'recommendations'),
+      where('departmentId', '==', profile.departmentId)
+    );
+
+    const chiefRecUnsubscribe = onSnapshot(chiefRecQuery, async (snapshot) => {
+      console.log('Chief recommendations snapshot received for department:', profile.departmentId);
+      console.log("kobe bryant")
+      try {
+        const chiefRecData = await Promise.all(
+          snapshot.docs.map(async docSnapshot => {
+            const data = docSnapshot.data() as RecommendationDoc;
+            const userDoc = await getDoc(doc(db, 'users', data.userId));
+            return {
+              id: docSnapshot.id,
+              title: data.content.split('\n')[0] || data.content,
+              description: data.content.split('\n').slice(1).join('\n') || '',
+              userId: data.userId,
+              createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
+              departmentId: data.departmentId || null,
+              deadline: data.deadline || null,
+              status: data.status,
+              completedAt: data.completedAt || undefined,
+            } as Recommendation;
+          })
+        );
+
+        console.log('Chief recommendations processed:', chiefRecData);
+        setChiefRecommendations(chiefRecData);
+      } catch (err) {
+        console.error('Error processing chief recommendations:', err);
+        setError(err instanceof Error ? err.message : 'Failed to process chief recommendations');
+      }
+    });
+
+    return () => {
+      chiefRecUnsubscribe();
+    };
+  }, [session?.uid, profile?.role, profile?.departmentId]);
+
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign-in with:', { email });
@@ -303,18 +388,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string, departmentId: string) => {
+  const signUp = async (email: string, password: string, name: string, departmentId: string, userType: string) => {
     try {
-      console.log('Attempting sign-up with:', { email, name, departmentId });
+      console.log('Attempting sign-up with:', { email, name, departmentId, userType });
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // Map userType to role
+      const role: "user" | "chief" = userType === 'department_head' ? 'chief' : 'user';
+      
       await setDoc(doc(db, 'users', user.uid), {
         id: user.uid,
-        role: 'user' as const,
+        role,
         name,
         departmentId: departmentId || null,
+       
       });
-      console.log('Sign-up successful:', { user });
+      
+      console.log('Sign-up successful:', { user, role });
     } catch (err) {
       console.error('Sign-up error:', err);
       setError(err instanceof Error ? err.message : 'Signup failed');
@@ -328,7 +419,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setProfile(null);
       setRecommendations([]);
+      setChiefRecommendations([]);
       setUsers([]);
+      setChiefUsers([]);
       setError(null);
       console.log('Sign-out successful');
     } catch (err) {
@@ -440,6 +533,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return recommendations.filter(rec => rec.userId === userId);
   };
 
+  const getChiefRecommendationsByDepartment = (departmentId: string) => {
+    return chiefRecommendations.filter(rec => rec.departmentId === departmentId);
+  };
+
   const addDepartment = async (department: Omit<Department, 'id'>) => {
     try {
       console.log('Adding department:', department);
@@ -472,6 +569,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return filtered;
   };
 
+  const getFilteredChiefRecommendations = () => {
+    let filtered = chiefRecommendations;
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(rec => rec.status === statusFilter);
+    }
+    return filtered;
+  };
+
   console.log('AuthProvider render - Session:', !!session, 'Profile:', !!profile, 'Loading:', loading);
 
   return (
@@ -485,7 +591,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         recommendations,
+        chiefRecommendations,
         users,
+        chiefUsers,
         addRecommendation,
         updateRecommendation,
         deleteRecommendation,
@@ -493,12 +601,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getRecommendationsByDepartment,
         getRecommendationsByStatus,
         getRecommendationsByUser,
+        getChiefRecommendationsByDepartment,
         addDepartment,
         statusFilter,
         setStatusFilter,
         departmentFilter,
         setDepartmentFilter,
         getFilteredRecommendations,
+        getFilteredChiefRecommendations,
         error,
       }}
     >
