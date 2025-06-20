@@ -10,7 +10,9 @@ import {
   Pencil, 
   Trash2, 
   X,
-  Save
+  Save,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 
 interface RecommendationCardProps {
@@ -32,20 +34,49 @@ const RecommendationCard = ({
 }: RecommendationCardProps) => {
   const { profile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // Added for loading state
+  const [isUpdating, setIsUpdating] = useState(false);
   const [editData, setEditData] = useState({
     title: recommendation.title,
     description: recommendation.description,
     deadline: recommendation.deadline ?? ''
   });
   
+  // Handle user marking as complete (sets to pending)
   const handleMarkComplete = async () => {
+    if (onStatusChange) {
+      setIsUpdating(true);
+      try {
+        await onStatusChange(recommendation.id, 'pending');
+      } catch (error) {
+        console.error('Failed to mark as pending:', error);
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
+  // Handle admin/chief confirming completion
+  const handleConfirmComplete = async () => {
     if (onStatusChange) {
       setIsUpdating(true);
       try {
         await onStatusChange(recommendation.id, 'completed', new Date().toISOString());
       } catch (error) {
-        console.error('Failed to mark as complete:', error);
+        console.error('Failed to confirm completion:', error);
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
+  // Handle admin/chief rejecting completion (back to in_progress)
+  const handleRejectComplete = async () => {
+    if (onStatusChange) {
+      setIsUpdating(true);
+      try {
+        await onStatusChange(recommendation.id, 'in_progress');
+      } catch (error) {
+        console.error('Failed to reject completion:', error);
       } finally {
         setIsUpdating(false);
       }
@@ -66,15 +97,16 @@ const RecommendationCard = ({
   };
   
   const isOverdue = recommendation.deadline && 
-  new Date(recommendation.deadline) < new Date() && 
-  recommendation.status === 'in_progress';
+    new Date(recommendation.deadline) < new Date() && 
+    recommendation.status === 'in_progress';
 
   // Fixed: Properly check for both admin and chief roles
   const isAdmin = profile?.role === 'admin' || profile?.role === 'chief';
   
   return (
     <div className={`card transition-all duration-300 hover:shadow-md ${
-      isOverdue ? 'border-error-300' : ''
+      isOverdue ? 'border-error-300' : 
+      recommendation.status === 'pending' ? 'border-warning-300 bg-warning-50' : ''
     }`}>
       <div className="p-4">
         <div className="flex justify-between items-start">
@@ -141,6 +173,18 @@ const RecommendationCard = ({
           </div>
         )}
         
+        {/* Pending status notification */}
+        {recommendation.status === 'pending' && (
+          <div className="mb-3 p-2 bg-warning-100 border border-warning-200 rounded-lg">
+            <div className="flex items-center">
+              <AlertCircle className="h-4 w-4 text-warning-600 mr-2" />
+              <span className="text-sm text-warning-700 font-medium">
+                En attente de confirmation par l'administration
+              </span>
+            </div>
+          </div>
+        )}
+        
         {isEditing && isAdmin ? (
           <textarea
             value={editData.description}
@@ -168,10 +212,11 @@ const RecommendationCard = ({
                 />
               ) : (
                 <span>
-                Date limite: {recommendation.deadline 
-                  ? format(new Date(recommendation.deadline), 'MMM d, yyyy') 
-                  : 'No deadline set'}
-              </span> )}
+                  Date limite: {recommendation.deadline 
+                    ? format(new Date(recommendation.deadline), 'MMM d, yyyy') 
+                    : 'No deadline set'}
+                </span>
+              )}
             </div>
             
             {userName && (
@@ -190,6 +235,7 @@ const RecommendationCard = ({
           </div>
         </div>
         
+        {/* User action button - Mark as complete (sets to pending) */}
         {profile?.role === 'user' && 
          recommendation.status === 'in_progress' && 
          recommendation.userId === profile.id && (
@@ -202,6 +248,42 @@ const RecommendationCard = ({
               <CheckCircle2 className="h-4 w-4 mr-1" />
               {isUpdating ? 'Mise à jour...' : 'Marquer comme terminé'}
             </button>
+          </div>
+        )}
+
+        {/* Admin/Chief confirmation buttons for pending recommendations */}
+        {isAdmin && recommendation.status === 'pending' && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="flex gap-2">
+              <button 
+                onClick={handleConfirmComplete}
+                className="btn btn-sm btn-success flex-1"
+                disabled={isUpdating}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                {isUpdating ? 'Confirmation...' : 'Confirmer terminé'}
+              </button>
+              <button 
+                onClick={handleRejectComplete}
+                className="btn btn-sm btn-error flex-1"
+                disabled={isUpdating}
+              >
+                <X className="h-4 w-4 mr-1" />
+                {isUpdating ? 'Rejet...' : 'Rejeter'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Show pending status for users */}
+        {profile?.role === 'user' && 
+         recommendation.status === 'pending' && 
+         recommendation.userId === profile.id && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-center text-sm text-warning-600">
+              <Clock className="h-4 w-4 mr-1" />
+              <span>En attente de confirmation administrative</span>
+            </div>
           </div>
         )}
       </div>

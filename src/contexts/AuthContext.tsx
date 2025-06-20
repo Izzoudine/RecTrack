@@ -44,8 +44,10 @@ export type Recommendation = {
   createdBy: string;
   departmentId: string | null;
   deadline: string | null;
-  status: 'in_progress' | 'completed' | 'overdue';
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
   completedAt?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
 };
 
 export type RecommendationResponse = {
@@ -54,8 +56,10 @@ export type RecommendationResponse = {
   departmentId: string | null;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'completed' | 'overdue';
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
   completedAt: string | null;
+  confirmedAt?: string | null;
+  confirmedBy?: string | null;
   createdBy?: string;
 };
 
@@ -78,8 +82,10 @@ interface RecommendationDoc {
   departmentId: string | null;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'completed' | 'overdue';
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
   completedAt: string | null;
+  confirmedAt?: string | null;
+  confirmedBy?: string | null;
 }
 
 interface AuthContextType {
@@ -94,14 +100,20 @@ interface AuthContextType {
   chiefRecommendations: Recommendation[];
   users: { id: string; name: string; departmentId: string | null }[];
   chiefUsers: { id: string; name: string; departmentId: string | null }[];
-  addRecommendation: (recommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy'>) => Promise<RecommendationResponse>;
+  addRecommendation: (recommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy' | 'confirmedAt' | 'confirmedBy'>) => Promise<RecommendationResponse>;
   updateRecommendation: (id: string, data: Partial<Recommendation>) => Promise<void>;
   deleteRecommendation: (id: string) => Promise<void>;
   updateRecommendationStatus: (id: string, status: Recommendation['status'], completedAt?: string) => Promise<void>;
+  
+  confirmRecommendation: (id: string) => Promise<void>;
+  submitForConfirmation: (id: string) => Promise<void>;
+  
   getRecommendationsByDepartment: (departmentId: string) => Recommendation[];
   getRecommendationsByStatus: (status: Recommendation['status']) => Recommendation[];
   getRecommendationsByUser: (userId: string) => Recommendation[];
   getChiefRecommendationsByDepartment: (departmentId: string) => Recommendation[];
+  getPendingRecommendations: () => Recommendation[];
+  getChiefPendingRecommendations: () => Recommendation[];
   addDepartment: (department: Omit<Department, 'id'>) => Promise<void>;
   statusFilter: Recommendation['status'] | 'all';
   setStatusFilter: (status: Recommendation['status'] | 'all') => void;
@@ -286,6 +298,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           snapshot.docs.map(async docSnapshot => {
             const data = docSnapshot.data() as RecommendationDoc;
             const userDoc = await getDoc(doc(db, 'users', data.userId));
+            
+            // Get confirmedBy user name if exists
+            let confirmedByName = undefined;
+            if (data.confirmedBy) {
+              const confirmedByDoc = await getDoc(doc(db, 'users', data.confirmedBy));
+              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Unknown';
+            }
+            
             return {
               id: docSnapshot.id,
               title: data.content.split('\n')[0] || data.content,
@@ -296,6 +316,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               deadline: data.deadline || null,
               status: data.status,
               completedAt: data.completedAt || undefined,
+              confirmedAt: data.confirmedAt || undefined,
+              confirmedBy: confirmedByName,
             } as Recommendation;
           })
         );
@@ -339,12 +361,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const chiefRecUnsubscribe = onSnapshot(chiefRecQuery, async (snapshot) => {
       console.log('Chief recommendations snapshot received for department:', profile.departmentId);
-      console.log("kobe bryant")
       try {
         const chiefRecData = await Promise.all(
           snapshot.docs.map(async docSnapshot => {
             const data = docSnapshot.data() as RecommendationDoc;
             const userDoc = await getDoc(doc(db, 'users', data.userId));
+            
+            // Get confirmedBy user name if exists
+            let confirmedByName = undefined;
+            if (data.confirmedBy) {
+              const confirmedByDoc = await getDoc(doc(db, 'users', data.confirmedBy));
+              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Unknown';
+            }
+            
             return {
               id: docSnapshot.id,
               title: data.content.split('\n')[0] || data.content,
@@ -355,6 +384,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               deadline: data.deadline || null,
               status: data.status,
               completedAt: data.completedAt || undefined,
+              confirmedAt: data.confirmedAt || undefined,
+              confirmedBy: confirmedByName,
             } as Recommendation;
           })
         );
@@ -431,7 +462,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addRecommendation = async (newRecommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy'>) => {
+  const addRecommendation = async (newRecommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy' | 'confirmedAt' | 'confirmedBy'>) => {
     if (!session || !profile) {
       setError('You must be logged in to add a recommendation');
       throw new Error('You must be logged in to add a recommendation');
@@ -446,6 +477,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
         completedAt: null,
+        confirmedAt: null,
+        confirmedBy: null,
       };
       const docRef = await addDoc(collection(db, 'recommendations'), recommendation);
       const userDoc = await getDoc(doc(db, 'users', newRecommendation.userId));
@@ -457,6 +490,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
         completedAt: null,
+        confirmedAt: null,
+        confirmedBy: null,
         createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
       };
       return response;
@@ -521,6 +556,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // New function to submit recommendation for confirmation (user action)
+  const submitForConfirmation = async (id: string) => {
+    if (!session || !profile) {
+      setError('You must be logged in to submit a recommendation');
+      throw new Error('You must be logged in to submit a recommendation');
+    }
+
+    try {
+      const recommendation = recommendations.find(r => r.id === id);
+      if (!recommendation) {
+        throw new Error('Recommendation not found');
+      }
+
+      // Only the user who owns the recommendation can submit it for confirmation
+      if (recommendation.userId !== session.uid) {
+        throw new Error('You can only submit your own recommendations for confirmation');
+      }
+
+      // Only allow submission if status is 'in_progress'
+      if (recommendation.status !== 'in_progress') {
+        throw new Error('Only in-progress recommendations can be submitted for confirmation');
+      }
+
+      await updateDoc(doc(db, 'recommendations', id), {
+        status: 'pending'
+      });
+
+      console.log('Recommendation submitted for confirmation:', id);
+    } catch (err) {
+      console.error('Error submitting recommendation for confirmation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to submit recommendation for confirmation');
+      throw err;
+    }
+  };
+
+  // New function to confirm recommendation (admin/chief action)
+  const confirmRecommendation = async (id: string) => {
+    if (!session || !profile) {
+      setError('You must be logged in to confirm a recommendation');
+      throw new Error('You must be logged in to confirm a recommendation');
+    }
+
+    try {
+      const recommendation = recommendations.find(r => r.id === id) || 
+                            chiefRecommendations.find(r => r.id === id);
+      
+      if (!recommendation) {
+        throw new Error('Recommendation not found');
+      }
+
+      // Check permissions: admin can confirm all, chief can only confirm from their department
+      const canConfirm = profile.role === 'admin' || 
+                        (profile.role === 'chief' && recommendation.departmentId === profile.departmentId);
+      
+      if (!canConfirm) {
+        throw new Error('You do not have permission to confirm this recommendation');
+      }
+
+      // Only allow confirmation if status is 'pending'
+      if (recommendation.status !== 'pending') {
+        throw new Error('Only pending recommendations can be confirmed');
+      }
+
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'recommendations', id), {
+        status: 'confirmed',
+        confirmedAt: now,
+        confirmedBy: session.uid
+      });
+
+      console.log('Recommendation confirmed:', id);
+    } catch (err) {
+      console.error('Error confirming recommendation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to confirm recommendation');
+      throw err;
+    }
+  };
+
   const getRecommendationsByDepartment = (departmentId: string) => {
     return recommendations.filter(rec => rec.departmentId === departmentId);
   };
@@ -535,6 +648,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getChiefRecommendationsByDepartment = (departmentId: string) => {
     return chiefRecommendations.filter(rec => rec.departmentId === departmentId);
+  };
+
+  // New function to get pending recommendations for admin
+  const getPendingRecommendations = () => {
+    if (profile?.role !== 'admin') return [];
+    return recommendations.filter(rec => rec.status === 'pending');
+  };
+
+  // New function to get pending recommendations for chief (department specific)
+  const getChiefPendingRecommendations = () => {
+    if (profile?.role !== 'chief' || !profile.departmentId) return [];
+    return chiefRecommendations.filter(rec => rec.status === 'pending');
   };
 
   const addDepartment = async (department: Omit<Department, 'id'>) => {
@@ -598,10 +723,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateRecommendation,
         deleteRecommendation,
         updateRecommendationStatus,
+        confirmRecommendation,
+        submitForConfirmation,
         getRecommendationsByDepartment,
         getRecommendationsByStatus,
         getRecommendationsByUser,
         getChiefRecommendationsByDepartment,
+        getPendingRecommendations,
+        getChiefPendingRecommendations,
         addDepartment,
         statusFilter,
         setStatusFilter,

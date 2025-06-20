@@ -10,6 +10,7 @@ const StatusFilter = ({ currentStatus, onStatusChange }: StatusFilterProps) => {
     { value: 'all', label: 'Tous les statuts' },
     { value: 'in_progress', label: 'En cours' },
     { value: 'completed', label: 'Terminé' },
+    { value: 'pending', label: 'En cours de validation' },
     { value: 'overdue', label: 'En retard' },
   ];
   

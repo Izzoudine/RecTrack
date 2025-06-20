@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import RecommendationCard from "../../components/RecommendationCard";
-import StatusFilter from "../../components/StatusFilter";
+import RecommendationCardConfirm from "../../components/RecommendationCardConfirm";
 import DepartmentFilter from "../../components/DepartmentFilter";
 import {
   Plus,
@@ -9,32 +8,29 @@ import {
   Search,
   X,
   CalendarDays,
-  AlertTriangle,
   User,
+  Clock,
 } from "lucide-react";
 import { format } from "date-fns";
 
-const ChiefRecommendations = () => {
+const AdminRecommendationsConfirm = () => {
   const {
     departments,
-    chiefUsers,
+    users,
     addRecommendation,
     updateRecommendation,
     deleteRecommendation,
     updateRecommendationStatus,
-    statusFilter,
-    setStatusFilter,
-    departmentFilter,
-    setDepartmentFilter,
-    getFilteredChiefRecommendations,
+    confirmRecommendation,
+    getPendingRecommendations,
     loading,
-
     profile,
   } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState<string | 'all'>('all');
 
   // New recommendation form state
   const [formData, setFormData] = useState({
@@ -48,20 +44,27 @@ const ChiefRecommendations = () => {
   });
   const [formError, setFormError] = useState("");
 
-  // Debug logs
-  console.log("ChiefRecommendations - Departments:", departments);
-  console.log("ChiefRecommendations - Users:", chiefUsers);
-  console.log(
-    "ChiefRecommendations - Filtered Recommendations:",
-    getFilteredChiefRecommendations()
-  );
+  // Get pending recommendations based on user role
+  const getPendingRecommendationsForRole = () => {
+    if (profile?.role === 'admin') {
+      return getPendingRecommendations();
+    } 
+    return [];
+  };
 
-  // Handle non-admin access
-  if (profile?.role !== "chief") {
+  const pendingRecommendations = getPendingRecommendationsForRole();
+
+  // Debug logs
+  console.log("AdminRecommendationsConfirm - Departments:", departments);
+  console.log("AdminRecommendationsConfirm - Users:", users);
+  console.log("AdminRecommendationsConfirm - Pending Recommendations:", pendingRecommendations);
+
+  // Handle non-admin/chief access
+  if (profile?.role !== "admin" && profile?.role !== "chief") {
     return (
       <div className="max-w-7xl mx-auto px-4 text-center py-8">
         <p className="text-error-700">
-          Accès refusé : Cette page est réservée aux administrateurs.
+          Accès refusé : Cette page est réservée aux administrateurs et chefs de département.
         </p>
       </div>
     );
@@ -86,13 +89,17 @@ const ChiefRecommendations = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  // Filter recommendations based on search term
-  const filteredRecommendations = getFilteredChiefRecommendations().filter(
-    (rec) =>
-      searchTerm === "" ||
+  // Filter recommendations based on search term and department
+  const filteredRecommendations = pendingRecommendations.filter((rec) => {
+    const matchesSearch = searchTerm === "" ||
       rec.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rec.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      rec.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || 
+      rec.departmentId === departmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
 
   // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,7 +117,7 @@ const ChiefRecommendations = () => {
     }
 
     // Get user's departmentId
-    const selectedUser = chiefUsers.find((user) => user.id === formData.userId);
+    const selectedUser = users.find((user) => user.id === formData.userId);
     if (!selectedUser) {
       setFormError("Utilisateur sélectionné invalide");
       return;
@@ -153,37 +160,52 @@ const ChiefRecommendations = () => {
 
   // Helper function to get user name by id
   const getUserNameById = (id: string) => {
-    const user = chiefUsers.find((u: { id: string }) => u.id === id);
+    const user = users.find((u: { id: string }) => u.id === id);
     return user ? user.name : "Utilisateur inconnu";
   };
 
   // Get selected user's department for display
   const selectedUserDepartment = formData.userId
     ? getDepartmentById(
-      chiefUsers.find((user) => user.id === formData.userId)?.departmentId
+        users.find((user) => user.id === formData.userId)?.departmentId
       )
     : null;
+
+  // Handle recommendation confirmation
+  const handleConfirmRecommendation = async (id: string) => {
+    try {
+      await confirmRecommendation(id);
+    } catch (error) {
+      console.error("Error confirming recommendation:", error);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Recommandations
+          <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
+            <Clock className="h-6 w-6 mr-2 text-orange-500" />
+            Recommandations en attente de confirmation
           </h1>
           <p className="text-gray-600">
-            Gérez et suivez toutes les recommandations du département
+            {profile?.role === 'admin' 
+              ? "Confirmez les recommandations soumises par les utilisateurs"
+              : "Confirmez les recommandations de votre département"
+            } ({filteredRecommendations.length} en attente)
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn"
-          style={{ backgroundColor: "#00a551", color: "white" }}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Ajouter une recommandation
-        </button>
+        {profile?.role === 'admin' && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn"
+            style={{ backgroundColor: "#00a551", color: "white" }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter une recommandation
+          </button>
+        )}
       </div>
 
       {/* Search and Filter */}
@@ -194,7 +216,7 @@ const ChiefRecommendations = () => {
           </div>
           <input
             type="text"
-            placeholder="Recherche des recommandations..."
+            placeholder="Recherche des recommandations en attente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input pl-10 w-full"
@@ -210,12 +232,9 @@ const ChiefRecommendations = () => {
             {showFilters ? "Masquer les filtres" : "Afficher les filtres"}
           </button>
 
-          {(statusFilter !== "all" || departmentFilter !== "all") && (
+          {departmentFilter !== "all" && (
             <button
-              onClick={() => {
-                setStatusFilter("all");
-                setDepartmentFilter("all");
-              }}
+              onClick={() => setDepartmentFilter("all")}
               className="text-xs text-gray-500 hover:text-gray-700"
             >
               Réinitialiser les filtres
@@ -223,13 +242,8 @@ const ChiefRecommendations = () => {
           )}
         </div>
 
-        {showFilters && (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 p-4 border border-gray-200 rounded-lg bg-gray-50 max-w-3xl mx-auto">
-            <StatusFilter
-              currentStatus={statusFilter}
-              onStatusChange={setStatusFilter}
-            />
-
+        {showFilters && profile?.role === 'admin' && (
+          <div className="grid gap-4 grid-cols-1 p-4 border border-gray-200 rounded-lg bg-gray-50 max-w-3xl mx-auto">
             <DepartmentFilter
               departments={departments}
               currentDepartment={departmentFilter}
@@ -239,33 +253,57 @@ const ChiefRecommendations = () => {
         )}
       </div>
 
+      {/* Pending Recommendations Alert */}
+      {filteredRecommendations.length > 0 && (
+        <div className="mb-6 bg-orange-50 border border-orange-200 rounded-lg p-4 max-w-6xl mx-auto">
+          <div className="flex items-center">
+            <Clock className="h-5 w-5 text-orange-500 mr-2" />
+            <p className="text-orange-800 font-medium">
+              {filteredRecommendations.length} recommandation{filteredRecommendations.length > 1 ? 's' : ''} en attente de votre confirmation
+            </p>
+          </div>
+          <p className="text-orange-700 text-sm mt-1">
+            Cliquez sur "Confirmer" sur chaque carte pour valider les recommandations terminées.
+          </p>
+        </div>
+      )}
+
       {/* Recommendations Grid */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 max-w-6xl mx-auto">
         {filteredRecommendations.map((recommendation) => (
-          <RecommendationCard
+          <RecommendationCardConfirm
             key={recommendation.id}
             recommendation={recommendation}
             department={getDepartmentById(recommendation.departmentId)}
             userName={getUserNameById(recommendation.userId)}
             onStatusChange={updateRecommendationStatus}
-            onUpdate={updateRecommendation}
-            onDelete={deleteRecommendation}
+            onUpdate={profile?.role === 'admin' ? updateRecommendation : undefined}
+            onDelete={profile?.role === 'admin' ? deleteRecommendation : undefined}
+            onConfirm={handleConfirmRecommendation}
+            
           />
         ))}
       </div>
 
       {filteredRecommendations.length === 0 && (
-        <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200 max-w-3xl mx-auto">
-          <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-2">Aucune recommandation trouvée</p>
-          <p className="text-sm text-gray-400">
-            Essayez de modifier vos filtres ou votre terme de recherche.
+        <div className="p-8 text-center bg-green-50 rounded-lg border border-green-200 max-w-3xl mx-auto">
+          <div className="flex justify-center mb-4">
+            <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+              <Clock className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+          <p className="text-green-800 font-medium mb-2">Aucune recommandation en attente de confirmation</p>
+          <p className="text-sm text-green-600">
+            {searchTerm ? 
+              "Aucune recommandation ne correspond à votre recherche." :
+              "Toutes les recommandations ont été traitées ou il n'y en a pas de nouvelles à confirmer."
+            }
           </p>
         </div>
       )}
 
-      {/* Add Recommendation Modal */}
-      {isModalOpen && (
+      {/* Add Recommendation Modal - Only for Admin */}
+      {isModalOpen && profile?.role === 'admin' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-lg w-full">
             <div className="flex justify-between items-center p-4 border-b">
@@ -323,7 +361,7 @@ const ChiefRecommendations = () => {
                       <User className="h-4 w-4 mr-1" />
                       Attribuer à un utilisateur
                     </label>
-                    {chiefUsers.length === 0 ? (
+                    {users.length === 0 ? (
                       <p className="text-error-700 text-sm">
                         Aucun utilisateur disponible. Veuillez d'abord ajouter
                         des utilisateurs.
@@ -337,7 +375,7 @@ const ChiefRecommendations = () => {
                         className="input"
                       >
                         <option value="">Sélectionnez un utilisateur </option>
-                        {chiefUsers.map((user) => (
+                        {users.map((user) => (
                           <option key={user.id} value={user.id}>
                             {user.name}
                           </option>
@@ -396,7 +434,7 @@ const ChiefRecommendations = () => {
                   type="submit"
                   className="btn"
                   style={{ backgroundColor: "#00a551", color: "white" }}
-                  disabled={chiefUsers.length === 0} // Disable if no users
+                  disabled={users.length === 0} // Disable if no users
                 >
                   Ajouter une recommandation
                 </button>
@@ -409,4 +447,4 @@ const ChiefRecommendations = () => {
   );
 };
 
-export default ChiefRecommendations;
+export default AdminRecommendationsConfirm;

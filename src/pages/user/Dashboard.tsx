@@ -1,6 +1,6 @@
 import { useAuth } from '../../contexts/AuthContext';
 import StatsCard from '../../components/StatsCard';
-import { CheckCircle, Clock, AlertTriangle, User, Building2 } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, User, Building2, AlertCircle } from 'lucide-react';
 import RecommendationCard from '../../components/RecommendationCard';
 import { format } from 'date-fns';
 
@@ -9,7 +9,6 @@ const UserDashboard = () => {
     recommendations, 
     departments, 
     updateRecommendationStatus,
-    getRecommendationsByStatus,
     profile,
     session,
     loading,
@@ -35,7 +34,6 @@ const UserDashboard = () => {
     return (
       <div className="text-center mt-10 text-error-700">
         Veuillez vous connecter pour afficher votre tableau de bord
-
       </div>
     );
   }
@@ -52,13 +50,14 @@ const UserDashboard = () => {
   const completedCount = userRecommendations.filter(rec => rec.status === 'completed').length;
   const inProgressCount = userRecommendations.filter(rec => rec.status === 'in_progress').length;
   const overdueCount = userRecommendations.filter(rec => rec.status === 'overdue').length;
+  const pendingCount = userRecommendations.filter(rec => rec.status === 'pending').length;
 
   // Calculate completion rate
   const completionRate = userRecommendations.length > 0 
     ? Math.round((completedCount / userRecommendations.length) * 100) 
     : 0;
 
-  // Sort recommendations by deadline (closest first)
+  // Sort recommendations by deadline (closest first) - excluding completed
   const sortedRecommendations = [...userRecommendations]
     .filter(rec => rec.status !== 'completed')
     .sort((a, b) => {
@@ -66,6 +65,9 @@ const UserDashboard = () => {
       const dateB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
       return dateA - dateB;
     });
+
+  // Pending recommendations
+  const pendingRecommendations = userRecommendations.filter(rec => rec.status === 'pending');
 
   // Recently completed recommendations
   const recentlyCompleted = [...userRecommendations]
@@ -91,18 +93,25 @@ const UserDashboard = () => {
       </div>
       
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8 max-w-6xl mx-auto">
         <StatsCard 
           title="Recommandations totales"
           value={userRecommendations.length}
           icon={<User className="h-5 w-5" />}
           color="primary"
         />
+ 
         <StatsCard 
           title="En cours"
           value={inProgressCount}
           icon={<Clock className="h-5 w-5" />}
           color="secondary"
+        />
+        <StatsCard 
+          title="En attente"
+          value={pendingCount}
+          icon={<AlertCircle className="h-5 w-5" />}
+          color="warning"
         />
         <StatsCard 
           title="Terminé"
@@ -146,17 +155,36 @@ const UserDashboard = () => {
               </div>
               <div className="flex justify-between text-xs text-gray-600">
                 <span>Progression</span>
-                <span>{completionRate}% Compléter                </span>
+                <span>{completionRate}% Compléter</span>
               </div>
             </div>
           </div>
         </div>
       </div>
       
+      {/* Pending Recommendations */}
+      {pendingRecommendations.length > 0 && (
+        <div className="mb-8 max-w-6xl mx-auto">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+            Recommandations en attente
+          </h2>
+          
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            {pendingRecommendations.map((recommendation) => (
+              <RecommendationCard
+                key={recommendation.id}
+                recommendation={recommendation}
+                onStatusChange={updateRecommendationStatus}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Upcoming Deadlines */}
       <div className="mb-8 max-w-6xl mx-auto">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-        Échéances à venir
+          Échéances à venir
         </h2>
         
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
@@ -171,7 +199,7 @@ const UserDashboard = () => {
           {sortedRecommendations.length === 0 && (
             <div className="col-span-2 p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
               <CheckCircle className="h-12 w-12 text-success-500 mx-auto mb-4" />
-              <p className="text-gray-600">Aucune recommandation en attente ! Beau travail !              </p>
+              <p className="text-gray-600">Aucune recommandation en attente ! Beau travail !</p>
             </div>
           )}
         </div>
@@ -181,7 +209,7 @@ const UserDashboard = () => {
       {recentlyCompleted.length > 0 && (
         <div className="max-w-6xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-          Récemment terminé
+            Récemment terminé
           </h2>
           
           <div className="bg-gray-50 rounded-lg border border-gray-200">
@@ -198,8 +226,7 @@ const UserDashboard = () => {
                 <div>
                   <h3 className="font-medium text-gray-900">{recommendation.title}</h3>
                   <p className="text-xs text-gray-500">
-                  Terminé le
-                  {format(new Date(recommendation.completedAt!), 'MMM d, yyyy')}
+                    Terminé le {format(new Date(recommendation.completedAt!), 'MMM d, yyyy')}
                   </p>
                 </div>
               </div>

@@ -12,11 +12,12 @@ import UserRecommendations from './pages/user/Recommendations';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminDepartments from './pages/admin/Departments';
 import AdminRecommendations from './pages/admin/Recommendations';
+import AdminRecommendationsConfirm from './pages/admin/RecommendationsConfirm';
 import AdminUsers from './pages/admin/Users';
 
 import ChiefDashboard from './pages/chief/Dashboard';
-import ChiefValidations from './pages/chief/Validations';
 import ChiefRecommendations from './pages/chief/Recommendations';
+import ChiefRecommendationsConfirm from './pages/chief/Recommendations';
 import ChiefUsers from './pages/chief/Users';
 function App() {
   return (
@@ -74,6 +75,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/validations"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminRecommendationsConfirm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/users"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
@@ -93,7 +102,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
+         <Route
           path="/chief/recommendations"
           element={
             <ProtectedRoute allowedRoles={['chief']}>
@@ -105,7 +114,7 @@ function App() {
           path="/chief/validations"
           element={
             <ProtectedRoute allowedRoles={['chief']}>
-              <ChiefValidations />
+              <ChiefRecommendationsConfirm />
             </ProtectedRoute>
           }
         />

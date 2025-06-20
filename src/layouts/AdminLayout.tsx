@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, Building2, Clipboard, LogOut, Menu, X, Shield } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Clipboard, LogOut, Menu, X, Shield,CheckCircle } from 'lucide-react';
 
 const AdminLayout = () => {
   const { profile, signOut } = useAuth();
@@ -18,6 +18,7 @@ const AdminLayout = () => {
     { to: '/admin/departments', icon: <Building2 className="h-5 w-5" />, label: 'Départements' },
     { to: '/admin/users', icon: <Users className="h-5 w-5" />, label: 'Utilisateurs' },
     { to: '/admin/recommendations', icon: <Clipboard className="h-5 w-5" />, label: 'Recommandations' },
+    { to: '/admin/validations', icon: <CheckCircle className="h-5 w-5" />, label: 'Verifications' },
   ];
 
   const navClasses = {

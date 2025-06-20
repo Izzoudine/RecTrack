@@ -17,6 +17,11 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
       badgeClass = 'badge-success';
       label = 'Terminé';
       break;
+      case 'pending':
+        badgeClass = 'badge-warning';
+        label = 'En cours de validation';
+        break;
+          
     case 'overdue':
       badgeClass = 'badge-error';
       label = 'En retard';

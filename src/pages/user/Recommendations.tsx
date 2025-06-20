@@ -31,7 +31,7 @@ const UserRecommendations = () => {
   }
   
   // Handle mark as complete
-  const handleStatusChange = (id: string, status: 'completed' | 'in_progress' | 'overdue') => {
+  const handleStatusChange = (id: string, status: 'completed' | 'in_progress' | 'overdue' | 'pending') => {
     const now = format(new Date(), 'yyyy-MM-dd');
     updateRecommendationStatus(id, status, status === 'completed' ? now : undefined);
   };
