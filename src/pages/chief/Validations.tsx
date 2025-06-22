@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import RecommendationCardConfirm from "../../components/RecommendationCardConfirm";
 import {
-  Filter,
   Search,
   Clock,
 } from "lucide-react";
@@ -10,7 +9,7 @@ import {
 const ChiefRecommendationsConfirm = () => {
   const {
     departments,
-    users,
+    chiefUsers,
     updateRecommendation,
     deleteRecommendation,
     updateRecommendationStatus,
@@ -23,8 +22,6 @@ const ChiefRecommendationsConfirm = () => {
 
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [departmentFilter, setDepartmentFilter] = useState<string | 'all'>('all');
 
  
 
@@ -42,7 +39,7 @@ const ChiefRecommendationsConfirm = () => {
 
   // Debug logs
   console.log("ChiefRecommendationsConfirm - Departments:", departments);
-  console.log("ChiefRecommendationsConfirm - Users:", users);
+  console.log("ChiefRecommendationsConfirm - Users:", chiefUsers);
   console.log("ChiefRecommendationsConfirm - Pending Recommendations:", pendingRecommendations);
 
   // Handle non-admin/chief access
@@ -86,7 +83,7 @@ const ChiefRecommendationsConfirm = () => {
 
   // Helper function to get user name by id
   const getUserNameById = (id: string) => {
-    const user = users.find((u: { id: string }) => u.id === id);
+    const user = chiefUsers.find((u: { id: string }) => u.id === id);
     return user ? user.name : "Utilisateur inconnu";
   };
 
@@ -132,24 +129,6 @@ const ChiefRecommendationsConfirm = () => {
           />
         </div>
 
-        <div className="flex items-center justify-center">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center text-sm font-medium text-primary-600 mr-3"
-          >
-            <Filter className="h-4 w-4 mr-1" />
-            {showFilters ? "Masquer les filtres" : "Afficher les filtres"}
-          </button>
-
-          {departmentFilter !== "all" && (
-            <button
-              onClick={() => setDepartmentFilter("all")}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              Réinitialiser les filtres
-            </button>
-          )}
-        </div>
 
       </div>
 

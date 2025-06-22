@@ -88,12 +88,12 @@ const AdminDepartments = () => {
           const deptRecommendations = getRecommendationsByDepartment(
             department.id
           );
-          const completedCount = deptRecommendations.filter(
-            (r) => r.status === "completed"
+          const confirmedCount = deptRecommendations.filter(
+            (r) => r.status === "confirmed"
           ).length;
           const completionRate =
             deptRecommendations.length > 0
-              ? Math.round((completedCount / deptRecommendations.length) * 100)
+              ? Math.round((confirmedCount / deptRecommendations.length) * 100)
               : 0;
 
           return (

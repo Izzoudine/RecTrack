@@ -13,7 +13,7 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
       badgeClass = 'badge-primary';
       label = 'En cours';
       break;
-    case 'completed':
+    case 'confirmed':
       badgeClass = 'badge-success';
       label = 'Terminé';
       break;

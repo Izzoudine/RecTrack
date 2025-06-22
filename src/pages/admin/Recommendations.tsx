@@ -1,42 +1,49 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
 import RecommendationCard from "../../components/RecommendationCard";
-import StatusFilter from "../../components/StatusFilter";
-import DepartmentFilter from "../../components/DepartmentFilter";
 import {
   Plus,
-  Filter,
+  ChevronLeft,
+  ClipboardList,
   Search,
+  Filter,
   X,
   CalendarDays,
-  AlertTriangle,
   User,
 } from "lucide-react";
 import { format } from "date-fns";
 
-const AdminRecommendations = () => {
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
+
+const STATUS_OPTIONS = [
+  { value: "all",         label: "Tous" },
+  { value: "in_progress", label: "En cours" },
+  { value: "pending",     label: "En attente" },
+  { value: "confirmed",   label: "Terminées" },
+];
+
+const Recommendations = () => {
   const {
+    missions,
     departments,
     users,
-    addRecommendation,
     updateRecommendation,
     deleteRecommendation,
     updateRecommendationStatus,
-    statusFilter,
-    setStatusFilter,
-    departmentFilter,
-    setDepartmentFilter,
-    getFilteredRecommendations,
+    addRecommendation,
+    getRecommendationsByMission,
     loading,
-
     profile,
   } = useAuth();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const navigate = useNavigate();
+  const query = useQuery();
+  const missionId = query.get("missionId") ?? "";
 
-  // New recommendation form state
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -48,85 +55,60 @@ const AdminRecommendations = () => {
   });
   const [formError, setFormError] = useState("");
 
-  // Debug logs
-  console.log("AdminRecommendations - Departments:", departments);
-  console.log("AdminRecommendations - Users:", users);
-  console.log(
-    "AdminRecommendations - Filtered Recommendations:",
-    getFilteredRecommendations()
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [userFilter, setUserFilter] = useState("all");
+
+  const mission = missions.find((m) => m.id === missionId);
+  const missionRecommendations = useMemo(
+    () => getRecommendationsByMission(missionId),
+    [getRecommendationsByMission, missionId]
   );
 
-  // Handle non-admin access
-  if (profile?.role !== "admin") {
-    return (
-      <div className="max-w-7xl mx-auto px-4 text-center py-8">
-        <p className="text-error-700">
-          Accès refusé : Cette page est réservée aux administrateurs.
-        </p>
-      </div>
-    );
-  }
+  const filteredRec = missionRecommendations
+    .filter((rec) =>
+      profile && (rec.departmentId === profile.departmentId || rec.userId === profile.id)
+    )
+    .filter((rec) => {
+      const t = rec.title.toLowerCase();
+      const d = rec.description.toLowerCase();
+      const q = searchTerm.toLowerCase();
+      return t.includes(q) || d.includes(q);
+    })
+    .filter((rec) => statusFilter === "all" || rec.status === statusFilter)
+    .filter((rec) => userFilter === "all" || rec.userId === userFilter);
 
-  // Handle loading states
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 text-center py-8">
-        <p className="text-gray-600">Chargement des données... </p>
-      </div>
-    );
-  }
-
-  // Handle form input change
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((s) => ({ ...s, [name]: value }));
   };
 
-  // Filter recommendations based on search term
-  const filteredRecommendations = getFilteredRecommendations().filter(
-    (rec) =>
-      searchTerm === "" ||
-      rec.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rec.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (
-      !formData.title ||
-      !formData.description ||
-      !formData.userId ||
-      !formData.deadline
-    ) {
+    if (!formData.title || !formData.description || !formData.userId) {
       setFormError("Veuillez remplir tous les champs.");
       return;
     }
 
-    // Get user's departmentId
-    const selectedUser = users.find((user) => user.id === formData.userId);
-    if (!selectedUser) {
-      setFormError("Utilisateur sélectionné invalide");
+    const user = users.find((u) => u.id === formData.userId);
+    if (!user) {
+      setFormError("Utilisateur invalide.");
       return;
     }
 
-    // Add recommendation
     try {
       await addRecommendation({
         title: formData.title,
         description: formData.description,
         userId: formData.userId,
-        departmentId: selectedUser.departmentId,
+        departmentId: user.departmentId ?? null,
+        missionId,
         deadline: formData.deadline,
       });
 
-      // Reset form and close modal
+      setFormError("");
       setFormData({
         title: "",
         description: "",
@@ -136,269 +118,247 @@ const AdminRecommendations = () => {
           "yyyy-MM-dd"
         ),
       });
-      setFormError("");
       setIsModalOpen(false);
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Failed to add recommendation"
-      );
+    } catch (err: any) {
+      setFormError(err.message ?? "Erreur.");
     }
   };
 
-  // Helper function to get department by id
-  const getDepartmentById = (id: string | null | undefined) => {
-    if (!id) return null;
-    return departments.find((dept) => dept.id === id) || null;
-  };
+  const getDepartmentById = (id?: string | null) =>
+    id ? departments.find((d) => d.id === id) : null;
+  const getUserNameById = (id: string) =>
+    users.find((u) => u.id === id)?.name ?? "Inconnu";
 
-  // Helper function to get user name by id
-  const getUserNameById = (id: string) => {
-    const user = users.find((u: { id: string }) => u.id === id);
-    return user ? user.name : "Utilisateur inconnu";
-  };
+  const usersFromMissionDepartment = useMemo(() => {
+    if (!mission?.departmentId) return [];
+    return users.filter((u) => u.departmentId === mission.departmentId);
+  }, [users, mission]);
 
-  // Get selected user's department for display
-  const selectedUserDepartment = formData.userId
-    ? getDepartmentById(
-        users.find((user) => user.id === formData.userId)?.departmentId
-      )
-    : null;
+  if (!missionId) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 text-center">
+        Mission ID manquant dans l’URL.
+      </div>
+    );
+  }
+
+  if (loading || !mission) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 text-center">
+        Chargement des données...
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Recommandations
-          </h1>
-          <p className="text-gray-600">
-            Gérez et suivez toutes les recommandations du département
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+      >
+        <ChevronLeft className="h-4 w-4" /> Retour aux missions
+      </button>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn"
-          style={{ backgroundColor: "#00a551", color: "white" }}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Ajouter une recommandation
-        </button>
+      <div className="bg-white p-6 rounded-lg shadow border mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {mission.title}
+        </h1>
+        <p className="text-gray-700 mb-3">{mission.description}</p>
+        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+          {mission.departmentId && (
+            <span>
+              Département: {" "}
+              <strong>
+                {getDepartmentById(mission.departmentId)?.acronym}
+              </strong>
+            </span>
+          )}
+          {mission.deadline && (
+            <span>
+              Deadline: <strong>{mission.deadline}</strong>
+            </span>
+          )}
+          <span>
+            Statut: <strong>{mission.status}</strong>
+          </span>
+        </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="mb-6 space-y-4">
-        <div className="relative max-w-xl mx-auto">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-          </div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <ClipboardList className="h-5 w-5" />
+          Recommandations ({filteredRec.length})
+        </h2>
+
+        {profile?.role === "admin" && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn"
+            style={{ backgroundColor: "#00a551", color: "white" }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter une recommandation
+          </button>
+        )}
+      </div>
+
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Recherche des recommandations..."
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="input pl-10 w-full"
           />
         </div>
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="btn btn-outline flex items-center"
+        >
+          <Filter className="h-4 w-4 mr-2" /> Filtres
+        </button>
+      </div>
 
-        <div className="flex items-center justify-center">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center text-sm font-medium text-primary-600 mr-3"
-          >
-            <Filter className="h-4 w-4 mr-1" />
-            {showFilters ? "Masquer les filtres" : "Afficher les filtres"}
-          </button>
-
-          {(statusFilter !== "all" || departmentFilter !== "all") && (
-            <button
-              onClick={() => {
-                setStatusFilter("all");
-                setDepartmentFilter("all");
-              }}
-              className="text-xs text-gray-500 hover:text-gray-700"
+      {showFilters && (
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="label flex items-center">
+              <User className="h-4 w-4 mr-1" /> Utilisateur
+            </label>
+            <select
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              className="input w-full"
             >
-              Réinitialiser les filtres
-            </button>
-          )}
-        </div>
-
-        {showFilters && (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 p-4 border border-gray-200 rounded-lg bg-gray-50 max-w-3xl mx-auto">
-            <StatusFilter
-              currentStatus={statusFilter}
-              onStatusChange={setStatusFilter}
-            />
-
-            <DepartmentFilter
-              departments={departments}
-              currentDepartment={departmentFilter}
-              onDepartmentChange={setDepartmentFilter}
-            />
+              <option value="all">Tous</option>
+              {usersFromMissionDepartment.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-      </div>
 
-      {/* Recommendations Grid */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 max-w-6xl mx-auto">
-        {filteredRecommendations.map((recommendation) => (
-          <RecommendationCard
-            key={recommendation.id}
-            recommendation={recommendation}
-            department={getDepartmentById(recommendation.departmentId)}
-            userName={getUserNameById(recommendation.userId)}
-            onStatusChange={updateRecommendationStatus}
-            onUpdate={updateRecommendation}
-            onDelete={deleteRecommendation}
-          />
-        ))}
-      </div>
-
-      {filteredRecommendations.length === 0 && (
-        <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200 max-w-3xl mx-auto">
-          <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 mb-2">Aucune recommandation trouvée</p>
-          <p className="text-sm text-gray-400">
-            Essayez de modifier vos filtres ou votre terme de recherche.
-          </p>
+          <div>
+            <label className="label flex items-center">
+              <ClipboardList className="h-4 w-4 mr-1" /> Statut
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input w-full"
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
-      {/* Add Recommendation Modal */}
-      {isModalOpen && (
+      {filteredRec.length === 0 ? (
+        <div className="p-8 text-center bg-gray-50 rounded-lg border">
+          <p className="text-gray-500">Aucune recommandation trouvée.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filteredRec.map((rec) => (
+            <RecommendationCard
+              key={rec.id}
+              recommendation={rec}
+              department={getDepartmentById(rec.departmentId)}
+              userName={getUserNameById(rec.userId)}
+              onUpdate={updateRecommendation}
+              onDelete={deleteRecommendation}
+              onStatusChange={updateRecommendationStatus}
+            />
+          ))}
+        </div>
+      )}
+
+      {isModalOpen && profile?.role === "admin" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">
-                Ajouter une nouvelle recommandation{" "}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="p-4 max-h-[70vh] overflow-y-auto">
-                {formError && (
-                  <div className="mb-4 bg-error-50 text-error-700 p-3 rounded-md text-sm">
-                    {formError}
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label htmlFor="title" className="label">
-                    Titre
-                  </label>
-                  <input
-                    id="title"
-                    name="title"
-                    type="text"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="input"
-                    placeholder="Enter recommendation title"
-                  />
+          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full relative">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-500"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {formError && (
+                <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm">
+                  {formError}
                 </div>
-
-                <div className="form-group">
-                  <label htmlFor="description" className="label">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="input min-h-[100px]"
-                    placeholder="Enter detailed description"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label htmlFor="userId" className="label flex items-center">
-                      <User className="h-4 w-4 mr-1" />
-                      Attribuer à un utilisateur
-                    </label>
-                    {users.length === 0 ? (
-                      <p className="text-error-700 text-sm">
-                        Aucun utilisateur disponible. Veuillez d'abord ajouter
-                        des utilisateurs.
-                      </p>
-                    ) : (
-                      <select
-                        id="userId"
-                        name="userId"
-                        value={formData.userId}
-                        onChange={handleInputChange}
-                        className="input"
-                      >
-                        <option value="">Sélectionnez un utilisateur </option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label flex items-center">
-                      Département
-                    </label>
-                    {selectedUserDepartment ? (
-                      <p className="text-gray-600">
-                        {selectedUserDepartment.acronym} -{" "}
-                        {selectedUserDepartment.name}
-                      </p>
-                    ) : formData.userId ? (
-                      <p className="text-error-700 text-sm">
-                        Aucun département trouvé pour l'utilisateur sélectionné.
-                      </p>
-                    ) : (
-                      <p className="text-gray-600">
-                        Sélectionnez un utilisateur pour voir son département
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="deadline" className="label flex items-center">
-                    <CalendarDays className="h-4 w-4 mr-1" />
-                    Date limite
-                  </label>
-                  <input
-                    id="deadline"
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleInputChange}
-                    className="input"
-                    min={format(new Date(), "yyyy-MM-dd")}
-                  />
-                </div>
+              )}
+              <div>
+                <label className="label">Titre</label>
+                <input
+                  name="title"
+                  type="text"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="input"
+                />
               </div>
-
-              <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end space-x-2">
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="input min-h-[100px]"
+                />
+              </div>
+              <div>
+                <label className="label flex items-center">
+                  <User className="h-4 w-4 mr-1" /> Attribuer à
+                </label>
+                <select
+                  name="userId"
+                  value={formData.userId}
+                  onChange={handleInputChange}
+                  className="input"
+                >
+                  <option value="">Sélectionnez un utilisateur</option>
+                  {usersFromMissionDepartment.length === 0 ? (
+                    <option disabled>Aucun utilisateur dans ce département</option>
+                  ) : (
+                    usersFromMissionDepartment.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="label flex items-center">
+                  <CalendarDays className="h-4 w-4 mr-1" /> Date limite
+                </label>
+                <input
+                  name="deadline"
+                  type="date"
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  value={formData.deadline}
+                  onChange={handleInputChange}
+                  className="input"
+                />
+              </div>
+              <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="btn btn-outline"
+                  className="btn btn-outline mr-2"
                 >
                   Annuler
                 </button>
-                <button
-                  type="submit"
-                  className="btn"
-                  style={{ backgroundColor: "#00a551", color: "white" }}
-                  disabled={users.length === 0} // Disable if no users
-                >
-                  Ajouter une recommandation
+                <button type="submit" className="btn">
+                  Ajouter
                 </button>
               </div>
             </form>
@@ -409,4 +369,4 @@ const AdminRecommendations = () => {
   );
 };
 
-export default AdminRecommendations;
+export default Recommendations;

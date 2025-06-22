@@ -14,11 +14,13 @@ const AdminLayout = () => {
   };
 
   const navItems = [
+    
     { to: '/admin', icon: <LayoutDashboard className="h-5 w-5" />, label: 'Tableau de bord' },
-    { to: '/admin/departments', icon: <Building2 className="h-5 w-5" />, label: 'Départements' },
-    { to: '/admin/users', icon: <Users className="h-5 w-5" />, label: 'Utilisateurs' },
-    { to: '/admin/recommendations', icon: <Clipboard className="h-5 w-5" />, label: 'Recommandations' },
+    { to: '/admin/missions', icon: <Clipboard className="h-5 w-5" />, label: 'Missions' },
     { to: '/admin/validations', icon: <CheckCircle className="h-5 w-5" />, label: 'Verifications' },
+    { to: '/admin/users', icon: <Users className="h-5 w-5" />, label: 'Utilisateurs' },
+    { to: '/admin/departments', icon: <Building2 className="h-5 w-5" />, label: 'Départements' },
+  
   ];
 
   const navClasses = {

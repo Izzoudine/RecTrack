@@ -12,7 +12,7 @@ import {
   Shield,
 } from "lucide-react";
 
-const AdminLayout = () => {
+const ChiefLayout = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -28,22 +28,23 @@ const AdminLayout = () => {
       icon: <LayoutDashboard className="h-5 w-5" />,
       label: "Tableau de bord",
     },
-  
     {
-      to: "/chief/users",
-      icon: <Users className="h-5 w-5" />,
-      label: "Utilisateurs",
-    },
-    {
-      to: "/chief/recommendations",
+      to: "/chief/missions",
       icon: <Clipboard className="h-5 w-5" />,
-      label: "Recommandations",
+      label: "Missions",
     },
+ 
     {
       to: "/chief/validations",
       icon: <CheckCircle className="h-5 w-5" />,
       label: "Verifications",
     },
+    {
+      to: "/chief/users",
+      icon: <Users className="h-5 w-5" />,
+      label: "Utilisateurs",
+    },
+  
   ];
 
   const navClasses = {
@@ -103,7 +104,7 @@ const AdminLayout = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === "/admin"}
+                end={item.to === "/chief"}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) => `
                   flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors
@@ -156,4 +157,4 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout;
+export default ChiefLayout;

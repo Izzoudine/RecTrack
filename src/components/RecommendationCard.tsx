@@ -19,7 +19,7 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   department?: Department | null;
   userName?: string;
-  onStatusChange?: (id: string, status: Recommendation['status'], completedAt?: string) => void;
+  onStatusChange?: (id: string, status: Recommendation['status'], confirmedAt?: string) => void;
   onUpdate?: (id: string, data: Partial<Recommendation>) => void;
   onDelete?: (id: string) => void;
 }
@@ -60,7 +60,7 @@ const RecommendationCard = ({
     if (onStatusChange) {
       setIsUpdating(true);
       try {
-        await onStatusChange(recommendation.id, 'completed', new Date().toISOString());
+        await onStatusChange(recommendation.id, 'confirmed', new Date().toISOString());
       } catch (error) {
         console.error('Failed to confirm completion:', error);
       } finally {
@@ -84,6 +84,8 @@ const RecommendationCard = ({
   };
 
   const handleSave = () => {
+    console.log('Trying to update recommendation with id:', recommendation.id);
+
     if (onUpdate && isAdmin) {
       onUpdate(recommendation.id, editData);
     }
@@ -99,9 +101,10 @@ const RecommendationCard = ({
   const isOverdue = recommendation.deadline && 
     new Date(recommendation.deadline) < new Date() && 
     recommendation.status === 'in_progress';
-
-  // Fixed: Properly check for both admin and chief roles
+  // Check for both admin and chief roles
   const isAdmin = profile?.role === 'admin' || profile?.role === 'chief';
+  // Show edit/delete buttons only for admins/chiefs and when not confirmed
+  const canEditDelete = isAdmin && recommendation.status !== 'confirmed';
   
   return (
     <div className={`card transition-all duration-300 hover:shadow-md ${
@@ -110,7 +113,7 @@ const RecommendationCard = ({
     }`}>
       <div className="p-4">
         <div className="flex justify-between items-start">
-          {isEditing && isAdmin ? (
+          {isEditing && canEditDelete ? (
             <input
               type="text"
               value={editData.title}
@@ -125,7 +128,7 @@ const RecommendationCard = ({
           )}
           <div className="flex items-center space-x-2">
             <StatusBadge status={recommendation.status} />
-            {isAdmin && (
+            {canEditDelete && (
               <div className="flex space-x-1">
                 {isEditing ? (
                   <>
@@ -185,7 +188,7 @@ const RecommendationCard = ({
           </div>
         )}
         
-        {isEditing && isAdmin ? (
+        {isEditing && canEditDelete ? (
           <textarea
             value={editData.description}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
@@ -203,7 +206,7 @@ const RecommendationCard = ({
           <div className="flex flex-wrap gap-y-2">
             <div className="w-full sm:w-1/2 flex items-center text-sm text-gray-500">
               <CalendarDays className="h-4 w-4 mr-1 text-gray-400" />
-              {isEditing && isAdmin ? (
+              {isEditing && canEditDelete ? (
                 <input
                   type="date"
                   value={editData.deadline}
@@ -226,10 +229,10 @@ const RecommendationCard = ({
               </div>
             )}
             
-            {recommendation.completedAt && (
+            {recommendation.confirmedAt && (
               <div className="w-full sm:w-1/2 flex items-center text-sm text-success-600">
                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                <span>Terminé: {format(new Date(recommendation.completedAt), 'MMM d, yyyy')}</span>
+                <span>Terminé: {format(new Date(recommendation.confirmedAt), 'MMM d, yyyy')}</span>
               </div>
             )}
           </div>

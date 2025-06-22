@@ -9,7 +9,7 @@ const StatusFilter = ({ currentStatus, onStatusChange }: StatusFilterProps) => {
   const statuses: { value: Recommendation['status'] | 'all'; label: string }[] = [
     { value: 'all', label: 'Tous les statuts' },
     { value: 'in_progress', label: 'En cours' },
-    { value: 'completed', label: 'Terminé' },
+    { value: 'confirmed', label: 'Terminé' },
     { value: 'pending', label: 'En cours de validation' },
     { value: 'overdue', label: 'En retard' },
   ];

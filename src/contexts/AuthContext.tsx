@@ -18,7 +18,6 @@ import {
   doc,
   getDoc,
   setDoc,
- // getDocs,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -36,6 +35,20 @@ export type Department = {
   name: string;
 };
 
+export type Mission = {
+  id: string;
+  title: string;
+  description: string;
+  createdBy: string;
+  createdByName: string;
+  departmentId: string | null;
+  deadline: string | null;
+  createdAt: string;
+  confirmedAt?: string | null;
+  status: 'active' | 'confirmed' | 'overdue';
+  
+};
+
 export type Recommendation = {
   id: string;
   title: string;
@@ -43,9 +56,10 @@ export type Recommendation = {
   userId: string;
   createdBy: string;
   departmentId: string | null;
+  missionId: string; // New field linking to mission
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
-  completedAt?: string;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
+  confirmedAt?: string;
   confirmedAt?: string;
   confirmedBy?: string;
 };
@@ -54,10 +68,11 @@ export type RecommendationResponse = {
   id: string;
   userId: string;
   departmentId: string | null;
+  missionId: string;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
-  completedAt: string | null;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
+  confirmedAt: string | null;
   confirmedAt?: string | null;
   confirmedBy?: string | null;
   createdBy?: string;
@@ -77,13 +92,25 @@ interface UserDoc {
   departmentId: string | null;
 }
 
+interface MissionDoc {
+  title: string;
+  description: string;
+  createdBy: string;
+  departmentId: string | null;
+  deadline: string | null;
+  createdAt: string;
+  confirmedAt?: string | null;
+  status: 'active' | 'confirmed' | 'overdue';
+}
+
 interface RecommendationDoc {
   userId: string;
   departmentId: string | null;
+  missionId: string;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
-  completedAt: string | null;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
+  confirmedAt: string | null;
   confirmedAt?: string | null;
   confirmedBy?: string | null;
 }
@@ -91,6 +118,7 @@ interface RecommendationDoc {
 interface AuthContextType {
   session: User | null;
   departments: Department[];
+  missions: Mission[];
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -100,10 +128,20 @@ interface AuthContextType {
   chiefRecommendations: Recommendation[];
   users: { id: string; name: string; departmentId: string | null }[];
   chiefUsers: { id: string; name: string; departmentId: string | null }[];
+  
+  // Mission functions
+  addMission: (mission: Omit<Mission, 'id' | 'createdBy' | 'createdByName' | 'createdAt' | 'status'>) => Promise<Mission>;
+  updateMission: (id: string, data: Partial<Mission>) => Promise<void>;
+  deleteMission: (id: string) => Promise<void>;
+  updateMissionStatus: (id: string, status: Mission['status']) => Promise<void>;
+  getMissionsByDepartment: (departmentId: string) => Mission[];
+  getMissionsByStatus: (status: Mission['status']) => Mission[];
+  
+  // Recommendation functions
   addRecommendation: (recommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy' | 'confirmedAt' | 'confirmedBy'>) => Promise<RecommendationResponse>;
   updateRecommendation: (id: string, data: Partial<Recommendation>) => Promise<void>;
   deleteRecommendation: (id: string) => Promise<void>;
-  updateRecommendationStatus: (id: string, status: Recommendation['status'], completedAt?: string) => Promise<void>;
+  updateRecommendationStatus: (id: string, status: Recommendation['status'], confirmedAt?: string) => Promise<void>;
   
   confirmRecommendation: (id: string) => Promise<void>;
   submitForConfirmation: (id: string) => Promise<void>;
@@ -111,6 +149,7 @@ interface AuthContextType {
   getRecommendationsByDepartment: (departmentId: string) => Recommendation[];
   getRecommendationsByStatus: (status: Recommendation['status']) => Recommendation[];
   getRecommendationsByUser: (userId: string) => Recommendation[];
+  getRecommendationsByMission: (missionId: string) => Recommendation[];
   getChiefRecommendationsByDepartment: (departmentId: string) => Recommendation[];
   getPendingRecommendations: () => Recommendation[];
   getChiefPendingRecommendations: () => Recommendation[];
@@ -130,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [chiefRecommendations, setChiefRecommendations] = useState<Recommendation[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string; departmentId: string | null }[]>([]);
@@ -211,16 +251,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Fetch departments and users with real-time listeners
+  // Fetch departments, users and missions with real-time listeners
   useEffect(() => {
-    // Real-time subscription for departments - ONLY use listeners, no initial fetch
+    // Real-time subscription for departments
     const deptUnsubscribe = onSnapshot(collection(db, 'departments'), (snapshot) => {
       console.log('Departments snapshot received');
       const deptData = snapshot.docs.map(docSnapshot => ({
         id: docSnapshot.id,
         ...docSnapshot.data(),
       })) as Department[];
-      setDepartments(deptData); // Replace entire array with fresh data
+      setDepartments(deptData);
+    });
+
+    // Real-time subscription for missions
+    const missionsUnsubscribe = onSnapshot(collection(db, 'missions'), async (snapshot) => {
+      console.log('Missions snapshot received');
+      try {
+        const missionsData = await Promise.all(
+          snapshot.docs.map(async docSnapshot => {
+            const data = docSnapshot.data() as MissionDoc;
+            const createdByDoc = await getDoc(doc(db, 'users', data.createdBy));
+            
+            return {
+              id: docSnapshot.id,
+              title: data.title,
+              description: data.description,
+              createdBy: data.createdBy,
+              createdByName: createdByDoc.exists() ? (createdByDoc.data() as UserDoc).name : 'Inconnu',
+              departmentId: data.departmentId,
+              deadline: data.deadline,
+              createdAt: data.createdAt,
+              status: data.status,
+            } as Mission;
+          })
+        );
+
+        // Filter missions based on user role
+        let filteredMissions = missionsData;
+        if (profile && profile.role !== 'admin') {
+          if (profile.role === 'chief' && profile.departmentId) {
+            // Chiefs see missions from their department
+            filteredMissions = missionsData.filter(mission => 
+              mission.departmentId === profile.departmentId || mission.createdBy === profile.id
+            );
+          } else if (profile.role === 'user') {
+            // Users see missions from their department
+            filteredMissions = missionsData.filter(mission => 
+              mission.departmentId === profile.departmentId
+            );
+          }
+        }
+
+        setMissions(filteredMissions);
+      } catch (err) {
+        console.error('Error processing missions:', err);
+        setError(err instanceof Error ? err.message : 'Failed to process missions');
+      }
     });
 
     // Real-time subscription for users (only for admins)
@@ -235,13 +321,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: docSnapshot.data().name,
             departmentId: docSnapshot.data().departmentId || null,
           }));
-        setUsers(userData); // Replace entire array with fresh data
+        setUsers(userData);
       });
     } else {
-      setUsers([]); // Clear users if not admin
+      setUsers([]);
     }
 
-    // Real-time subscription for chief users (users in the same department as the chief)
+    // Real-time subscription for chief users
     let chiefUserUnsubscribe: (() => void) | undefined;
     if (profile?.role === 'chief' && profile?.departmentId) {
       const chiefUserQuery = query(
@@ -254,7 +340,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const chiefUserData = snapshot.docs
           .filter(docSnapshot => {
             const userData = docSnapshot.data();
-            // Include users and other chiefs from the same department, but exclude the current chief
             return (userData.role === 'user' || userData.role === 'chief') && 
                    docSnapshot.id !== profile.id;
           })
@@ -266,15 +351,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setChiefUsers(chiefUserData);
       });
     } else {
-      setChiefUsers([]); // Clear chief users if not chief or no department
+      setChiefUsers([]);
     }
 
     return () => {
       deptUnsubscribe();
+      missionsUnsubscribe();
       if (userUnsubscribe) userUnsubscribe();
       if (chiefUserUnsubscribe) chiefUserUnsubscribe();
     };
-  }, [profile?.role, profile?.departmentId, profile?.id]); // Added profile?.id to dependencies
+  }, [profile?.role, profile?.departmentId, profile?.id]);
 
   // Fetch recommendations with real-time listener
   useEffect(() => {
@@ -285,7 +371,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Real-time subscription for recommendations - ONLY use listener, no initial fetch
+    // Real-time subscription for recommendations
     let recQuery: Query<DocumentData, DocumentData> = collection(db, 'recommendations');
     if (profile?.role !== 'admin' && session?.uid) {
       recQuery = query(recQuery, where('userId', '==', session.uid));
@@ -303,7 +389,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             let confirmedByName = undefined;
             if (data.confirmedBy) {
               const confirmedByDoc = await getDoc(doc(db, 'users', data.confirmedBy));
-              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Unknown';
+              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Inconnu';
             }
             
             return {
@@ -311,11 +397,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               title: data.content.split('\n')[0] || data.content,
               description: data.content.split('\n').slice(1).join('\n') || '',
               userId: data.userId,
-              createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
+              createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Inconnu',
               departmentId: data.departmentId || null,
+              missionId: data.missionId,
               deadline: data.deadline || null,
               status: data.status,
-              completedAt: data.completedAt || undefined,
+              confirmedAt: data.confirmedAt || undefined,
               confirmedAt: data.confirmedAt || undefined,
               confirmedBy: confirmedByName,
             } as Recommendation;
@@ -332,8 +419,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         console.log('Filtered recommendations:', filteredRecs);
-        setRecommendations(filteredRecs); // Replace entire array with fresh data
-        setError(null); // Clear error on success
+        setRecommendations(filteredRecs);
+        setError(null);
       } catch (err) {
         console.error('Error processing recommendations:', err);
         setError(err instanceof Error ? err.message : 'Failed to process recommendations');
@@ -353,7 +440,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Real-time subscription for chief recommendations - filter by department
     const chiefRecQuery = query(
       collection(db, 'recommendations'),
       where('departmentId', '==', profile.departmentId)
@@ -367,11 +453,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = docSnapshot.data() as RecommendationDoc;
             const userDoc = await getDoc(doc(db, 'users', data.userId));
             
-            // Get confirmedBy user name if exists
             let confirmedByName = undefined;
             if (data.confirmedBy) {
               const confirmedByDoc = await getDoc(doc(db, 'users', data.confirmedBy));
-              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Unknown';
+              confirmedByName = confirmedByDoc.exists() ? (confirmedByDoc.data() as UserDoc).name : 'Inconnu';
             }
             
             return {
@@ -379,11 +464,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               title: data.content.split('\n')[0] || data.content,
               description: data.content.split('\n').slice(1).join('\n') || '',
               userId: data.userId,
-              createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
+              createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Inconnu',
               departmentId: data.departmentId || null,
+              missionId: data.missionId,
               deadline: data.deadline || null,
               status: data.status,
-              completedAt: data.completedAt || undefined,
+              confirmedAt: data.confirmedAt || undefined,
               confirmedAt: data.confirmedAt || undefined,
               confirmedBy: confirmedByName,
             } as Recommendation;
@@ -425,7 +511,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Map userType to role
       const role: "user" | "chief" = userType === 'department_head' ? 'chief' : 'user';
       
       await setDoc(doc(db, 'users', user.uid), {
@@ -433,7 +518,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         name,
         departmentId: departmentId || null,
-       
       });
       
       console.log('Sign-up successful:', { user, role });
@@ -451,6 +535,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setRecommendations([]);
       setChiefRecommendations([]);
+      setMissions([]);
       setUsers([]);
       setChiefUsers([]);
       setError(null);
@@ -462,10 +547,97 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Mission functions
+  const addMission = async (newMission: Omit<Mission, 'id' | 'createdBy' | 'createdByName' | 'createdAt' | 'status'>) => {
+    if (!session || !profile) {
+      setError('Vous devez être connecté pour créer une mission');
+      throw new Error('Vous devez être connecté pour créer une mission');
+    }
+
+    // Only admin and chief can create missions
+    if (profile.role !== 'admin' && profile.role !== 'chief') {
+      setError('Seuls les administrateurs et chefs de département peuvent créer des missions');
+      throw new Error('Seuls les administrateurs et chefs de département peuvent créer des missions');
+    }
+
+    try {
+      const missionDoc: MissionDoc = {
+        title: newMission.title,
+        description: newMission.description,
+        createdBy: session.uid,
+        departmentId: newMission.departmentId || null,
+        deadline: newMission.deadline || null,
+        createdAt: new Date().toISOString(),
+        confirmedAt: null,
+        status: 'active',
+      };
+
+      const docRef = await addDoc(collection(db, 'missions'), missionDoc);
+      
+      const mission: Mission = {
+        id: docRef.id,
+        title: newMission.title,
+        description: newMission.description,
+        createdBy: session.uid,
+        createdByName: profile.name,
+        departmentId: newMission.departmentId || null,
+        deadline: newMission.deadline || null,
+        createdAt: missionDoc.createdAt,
+        confirmedAt: null,
+        status: 'active',
+      };
+
+      return mission;
+    } catch (err) {
+      console.error('Error adding mission:', err);
+      setError(err instanceof Error ? err.message : 'Échec de la création de la mission');
+      throw err;
+    }
+  };
+
+  const updateMission = async (id: string, data: Partial<Mission>) => {
+    try {
+      const updateData: Partial<MissionDoc> = {
+        ...(data.title && { title: data.title }),
+        ...(data.description && { description: data.description }),
+        ...(data.departmentId !== undefined && { departmentId: data.departmentId || null }),
+        ...(data.deadline !== undefined && { deadline: data.deadline || null }),
+        ...(data.status && { status: data.status }),
+      };
+
+      await updateDoc(doc(db, 'missions', id), updateData);
+    } catch (err) {
+      console.error('Error updating mission:', err);
+      setError(err instanceof Error ? err.message : 'Échec de la mise à jour de la mission');
+      throw err;
+    }
+  };
+
+  const deleteMission = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'missions', id));
+    } catch (err) {
+      console.error('Error deleting mission:', err);
+      setError(err instanceof Error ? err.message : 'Échec de la suppression de la mission');
+      throw err;
+    }
+  };
+
+  const updateMissionStatus = async (id: string, status: Mission['status']) => {
+    try {
+      await updateDoc(doc(db, 'missions', id), { status });
+    } catch (err) {
+      console.error('Error updating mission status:', err);
+      setError(err instanceof Error ? err.message : 'Échec de la mise à jour du statut de la mission');
+      throw err;
+    }
+  };
+
+  // Recommendation functions
   const addRecommendation = async (newRecommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy' | 'confirmedAt' | 'confirmedBy'>) => {
     if (!session || !profile) {
-      setError('You must be logged in to add a recommendation');
-      throw new Error('You must be logged in to add a recommendation');
+      setError('Vous devez être connecté pour ajouter une recommandation');
+      throw new Error('Vous devez être connecté pour ajouter une recommandation');
     }
 
     try {
@@ -473,10 +645,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const recommendation: RecommendationDoc = {
         userId: newRecommendation.userId,
         departmentId: newRecommendation.departmentId || null,
+        missionId: newRecommendation.missionId,
         content,
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
-        completedAt: null,
+        confirmedAt: null,
         confirmedAt: null,
         confirmedBy: null,
       };
@@ -486,97 +659,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: docRef.id,
         userId: newRecommendation.userId,
         departmentId: newRecommendation.departmentId || null,
+        missionId: newRecommendation.missionId,
         content,
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
-        completedAt: null,
+        confirmedAt: null,
         confirmedAt: null,
         confirmedBy: null,
-        createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Unknown',
+        createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Inconnu',
       };
       return response;
     } catch (err) {
       console.error('Error adding recommendation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add recommendation');
+      setError(err instanceof Error ? err.message : 'Échec de l\'ajout de la recommandation');
       throw err;
     }
   };
 
   const updateRecommendation = async (id: string, data: Partial<Recommendation>) => {
     try {
-      const currentRec = recommendations.find(r => r.id === id);
-      if (!currentRec) {
-        setError('Recommendation not found');
-        throw new Error('Recommendation not found');
+      console.log('Trying to update recommendation with id:', id);
+  
+      const updateData: Partial<RecommendationDoc> = {};
+  
+      if (data.title || data.description) {
+        const currentRec = recommendations.find(r => r.id === id);
+        const title = data.title ?? currentRec?.title ?? '';
+        const description = data.description ?? currentRec?.description ?? '';
+        updateData.content = `${title}\n${description}`.trim();
       }
-
-      const content = data.title && data.description
-        ? `${data.title}\n${data.description}`.trim()
-        : data.title
-        ? `${data.title}\n${currentRec.description}`.trim()
-        : data.description
-        ? `${currentRec.title}\n${data.description}`.trim()
-        : undefined;
-
-      const updateData: Partial<RecommendationDoc> = {
-        ...(content && { content }),
-        ...(data.departmentId !== undefined && { departmentId: data.departmentId || null }),
-        ...(data.deadline !== undefined && { deadline: data.deadline || null }),
-      };
-
+  
+      if ('departmentId' in data) {
+        updateData.departmentId = data.departmentId || null;
+      }
+  
+      if ('missionId' in data) {
+        updateData.missionId = data.missionId!;
+      }
+  
+      if ('deadline' in data) {
+        updateData.deadline = data.deadline || null;
+      }
+  
       await updateDoc(doc(db, 'recommendations', id), updateData);
     } catch (err) {
       console.error('Error updating recommendation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update recommendation');
+      setError(err instanceof Error ? err.message : 'Échec de la mise à jour de la recommandation');
       throw err;
     }
   };
+  
 
   const deleteRecommendation = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'recommendations', id));
     } catch (err) {
       console.error('Error deleting recommendation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete recommendation');
+      setError(err instanceof Error ? err.message : 'Échec de la suppression de la recommandation');
       throw err;
     }
   };
 
-  const updateRecommendationStatus = async (id: string, status: Recommendation['status'], completedAt?: string) => {
+  const updateRecommendationStatus = async (id: string, status: Recommendation['status'], confirmedAt?: string) => {
     try {
       const updateData: Partial<RecommendationDoc> = {
         status,
-        ...(completedAt !== undefined && { completedAt: completedAt || null }),
+        ...(confirmedAt !== undefined && { confirmedAt: confirmedAt || null }),
       };
       await updateDoc(doc(db, 'recommendations', id), updateData);
     } catch (err) {
       console.error('Error updating recommendation status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update recommendation status');
+      setError(err instanceof Error ? err.message : 'Échec de la mise à jour du statut de la recommandation');
       throw err;
     }
   };
 
-  // New function to submit recommendation for confirmation (user action)
   const submitForConfirmation = async (id: string) => {
     if (!session || !profile) {
-      setError('You must be logged in to submit a recommendation');
-      throw new Error('You must be logged in to submit a recommendation');
+      setError('Vous devez être connecté pour soumettre une recommandation');
+      throw new Error('Vous devez être connecté pour soumettre une recommandation');
     }
 
     try {
       const recommendation = recommendations.find(r => r.id === id);
       if (!recommendation) {
-        throw new Error('Recommendation not found');
+        throw new Error('Recommandation introuvable');
       }
 
-      // Only the user who owns the recommendation can submit it for confirmation
       if (recommendation.userId !== session.uid) {
-        throw new Error('You can only submit your own recommendations for confirmation');
+        throw new Error('Vous ne pouvez soumettre que vos propres recommandations pour confirmation');
       }
 
-      // Only allow submission if status is 'in_progress'
       if (recommendation.status !== 'in_progress') {
-        throw new Error('Only in-progress recommendations can be submitted for confirmation');
+        throw new Error('Seules les recommandations en cours peuvent être soumises pour confirmation');
       }
 
       await updateDoc(doc(db, 'recommendations', id), {
@@ -586,16 +761,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Recommendation submitted for confirmation:', id);
     } catch (err) {
       console.error('Error submitting recommendation for confirmation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit recommendation for confirmation');
+      setError(err instanceof Error ? err.message : 'Échec de la soumission de la recommandation pour confirmation');
       throw err;
     }
   };
 
-  // New function to confirm recommendation (admin/chief action)
   const confirmRecommendation = async (id: string) => {
     if (!session || !profile) {
-      setError('You must be logged in to confirm a recommendation');
-      throw new Error('You must be logged in to confirm a recommendation');
+      setError('Vous devez être connecté pour confirmer une recommandation');
+      throw new Error('Vous devez être connecté pour confirmer une recommandation');
     }
 
     try {
@@ -637,6 +811,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getRecommendationsByDepartment = (departmentId: string) => {
     return recommendations.filter(rec => rec.departmentId === departmentId);
   };
+  const getRecommendationsByMission = (missionId: string) => {
+    return recommendations.filter(rec => rec.missionId === missionId);
+  };
+  
 
   const getRecommendationsByStatus = (status: Recommendation['status']) => {
     return recommendations.filter(rec => rec.status === status);
@@ -719,6 +897,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         chiefRecommendations,
         users,
         chiefUsers,
+        missions,                     //  ←  NEW
+        addMission,                   //  ←  NEW
+        updateMission,                //  ←  NEW
+        deleteMission,                //  ←  NEW
+        updateMissionStatus,          //  ←  NEW
+       
         addRecommendation,
         updateRecommendation,
         deleteRecommendation,
@@ -738,6 +922,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDepartmentFilter,
         getFilteredRecommendations,
         getFilteredChiefRecommendations,
+        getRecommendationsByMission,
         error,
       }}
     >

@@ -120,8 +120,8 @@ CREATE TABLE public.recommendations (
   departmentid UUID REFERENCES public.departments(id),
   content TEXT NOT NULL, -- Combines title and description
   deadline TIMESTAMP WITH TIME ZONE,
-  status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed', 'overdue')) DEFAULT 'in_progress',
-  completed_at TIMESTAMP WITH TIME ZONE,
+  status TEXT NOT NULL CHECK (status IN ('in_progress', 'confirmed', 'overdue')) DEFAULT 'in_progress',
+  confirmed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

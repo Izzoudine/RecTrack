@@ -3,21 +3,15 @@ import { useAuth } from "../../contexts/AuthContext";
 import RecommendationCardConfirm from "../../components/RecommendationCardConfirm";
 import DepartmentFilter from "../../components/DepartmentFilter";
 import {
-  Plus,
   Filter,
   Search,
-  X,
-  CalendarDays,
-  User,
   Clock,
 } from "lucide-react";
-import { format } from "date-fns";
 
 const AdminRecommendationsConfirm = () => {
   const {
     departments,
     users,
-    addRecommendation,
     updateRecommendation,
     deleteRecommendation,
     updateRecommendationStatus,
@@ -27,22 +21,9 @@ const AdminRecommendationsConfirm = () => {
     profile,
   } = useAuth();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState<string | 'all'>('all');
-
-  // New recommendation form state
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    userId: "",
-    deadline: format(
-      new Date().setDate(new Date().getDate() + 7),
-      "yyyy-MM-dd"
-    ),
-  });
-  const [formError, setFormError] = useState("");
 
   // Get pending recommendations based on user role
   const getPendingRecommendationsForRole = () => {
@@ -79,15 +60,6 @@ const AdminRecommendationsConfirm = () => {
     );
   }
 
-  // Handle form input change
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
 
   // Filter recommendations based on search term and department
   const filteredRecommendations = pendingRecommendations.filter((rec) => {
@@ -101,56 +73,7 @@ const AdminRecommendationsConfirm = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  // Submit form
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    // Validation
-    if (
-      !formData.title ||
-      !formData.description ||
-      !formData.userId ||
-      !formData.deadline
-    ) {
-      setFormError("Veuillez remplir tous les champs.");
-      return;
-    }
-
-    // Get user's departmentId
-    const selectedUser = users.find((user) => user.id === formData.userId);
-    if (!selectedUser) {
-      setFormError("Utilisateur sélectionné invalide");
-      return;
-    }
-
-    // Add recommendation
-    try {
-      await addRecommendation({
-        title: formData.title,
-        description: formData.description,
-        userId: formData.userId,
-        departmentId: selectedUser.departmentId,
-        deadline: formData.deadline,
-      });
-
-      // Reset form and close modal
-      setFormData({
-        title: "",
-        description: "",
-        userId: "",
-        deadline: format(
-          new Date().setDate(new Date().getDate() + 7),
-          "yyyy-MM-dd"
-        ),
-      });
-      setFormError("");
-      setIsModalOpen(false);
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Failed to add recommendation"
-      );
-    }
-  };
 
   // Helper function to get department by id
   const getDepartmentById = (id: string | null | undefined) => {
@@ -163,13 +86,6 @@ const AdminRecommendationsConfirm = () => {
     const user = users.find((u: { id: string }) => u.id === id);
     return user ? user.name : "Utilisateur inconnu";
   };
-
-  // Get selected user's department for display
-  const selectedUserDepartment = formData.userId
-    ? getDepartmentById(
-        users.find((user) => user.id === formData.userId)?.departmentId
-      )
-    : null;
 
   // Handle recommendation confirmation
   const handleConfirmRecommendation = async (id: string) => {
@@ -196,16 +112,6 @@ const AdminRecommendationsConfirm = () => {
           </p>
         </div>
 
-        {profile?.role === 'admin' && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn"
-            style={{ backgroundColor: "#00a551", color: "white" }}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Ajouter une recommandation
-          </button>
-        )}
       </div>
 
       {/* Search and Filter */}
@@ -302,147 +208,7 @@ const AdminRecommendationsConfirm = () => {
         </div>
       )}
 
-      {/* Add Recommendation Modal - Only for Admin */}
-      {isModalOpen && profile?.role === 'admin' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">
-                Ajouter une nouvelle recommandation{" "}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="p-4 max-h-[70vh] overflow-y-auto">
-                {formError && (
-                  <div className="mb-4 bg-error-50 text-error-700 p-3 rounded-md text-sm">
-                    {formError}
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label htmlFor="title" className="label">
-                    Titre
-                  </label>
-                  <input
-                    id="title"
-                    name="title"
-                    type="text"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="input"
-                    placeholder="Enter recommendation title"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="description" className="label">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="input min-h-[100px]"
-                    placeholder="Enter detailed description"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label htmlFor="userId" className="label flex items-center">
-                      <User className="h-4 w-4 mr-1" />
-                      Attribuer à un utilisateur
-                    </label>
-                    {users.length === 0 ? (
-                      <p className="text-error-700 text-sm">
-                        Aucun utilisateur disponible. Veuillez d'abord ajouter
-                        des utilisateurs.
-                      </p>
-                    ) : (
-                      <select
-                        id="userId"
-                        name="userId"
-                        value={formData.userId}
-                        onChange={handleInputChange}
-                        className="input"
-                      >
-                        <option value="">Sélectionnez un utilisateur </option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <label className="label flex items-center">
-                      Département
-                    </label>
-                    {selectedUserDepartment ? (
-                      <p className="text-gray-600">
-                        {selectedUserDepartment.acronym} -{" "}
-                        {selectedUserDepartment.name}
-                      </p>
-                    ) : formData.userId ? (
-                      <p className="text-error-700 text-sm">
-                        Aucun département trouvé pour l'utilisateur sélectionné.
-                      </p>
-                    ) : (
-                      <p className="text-gray-600">
-                        Sélectionnez un utilisateur pour voir son département
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="deadline" className="label flex items-center">
-                    <CalendarDays className="h-4 w-4 mr-1" />
-                    Date limite
-                  </label>
-                  <input
-                    id="deadline"
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleInputChange}
-                    className="input"
-                    min={format(new Date(), "yyyy-MM-dd")}
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="btn btn-outline"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="btn"
-                  style={{ backgroundColor: "#00a551", color: "white" }}
-                  disabled={users.length === 0} // Disable if no users
-                >
-                  Ajouter une recommandation
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+     
     </div>
   );
 };

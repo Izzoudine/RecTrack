@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import StatsCard from '../../components/StatsCard';
-import { ClipboardList, Clock, CheckCircle, AlertTriangle, Building2, Users } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, AlertTriangle, Building2, Users, HourglassIcon } from 'lucide-react';
 import RecommendationCard from '../../components/RecommendationCard';
 
 const ChiefDashboard = () => {
@@ -9,38 +9,44 @@ const ChiefDashboard = () => {
     chiefRecommendations,
     departments, 
     chiefUsers,
-    getRecommendationsByStatus 
+    updateRecommendation,
+    deleteRecommendation,
+    updateRecommendationStatus,
+    getChiefPendingRecommendations
   } = useAuth();
   
   const [recentRecommendations, setRecentRecommendations] = useState(
-    chiefRecommendations.filter(rec => rec.status !== 'completed').slice(0, 5)
+    chiefRecommendations.filter(rec => rec.status !== 'confirmed').slice(0, 5)
   );
   
-  // Get counts for dashboard stats
+  // Get counts for dashboard stats using AuthContext functions
   const totalRecommendations = chiefRecommendations.length;
-  const completedCount = getRecommendationsByStatus('completed').length;
-  const inProgressCount = getRecommendationsByStatus('in_progress').length;
-  const overdueCount = getRecommendationsByStatus('overdue').length;
-  const departmentCount = departments.length;
-  
+  const confirmedCount = chiefRecommendations.filter(rec => rec.status === 'confirmed').length;
+  console.log("confirmed recommendation: ",confirmedCount)
+  const inProgressCount = chiefRecommendations.filter(rec => rec.status === 'in_progress').length;
+  const overdueCount = chiefRecommendations.filter(rec => rec.status === 'overdue').length;
+  const pendingCount = getChiefPendingRecommendations().length;
+    
   // Calculate completion rate
   const completionRate = totalRecommendations > 0 
-    ? Math.round((completedCount / totalRecommendations) * 100) 
+    ? Math.round((confirmedCount / totalRecommendations) * 100) 
     : 0;
   
   // Sort recommendations by deadline (most recent first)
   useEffect(() => {
     const sorted = [...chiefRecommendations]
-      .filter(rec => rec.status !== 'completed')
+      .filter(rec => rec.status !== 'confirmed')
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 5);
     
     setRecentRecommendations(sorted);
   }, [chiefRecommendations]);
-  console.log("Therecommendations",chiefRecommendations)
+  
+  console.log("The recommendations", chiefRecommendations);
+  console.log("Pending count:", pendingCount);
   
   // Helper function to get department by id
-  const getDepartmentById = (id: string) => {
+  const getDepartmentById = (id: string | null) => {
     return departments.find(dept => dept.id === id);
   };
   
@@ -55,7 +61,7 @@ const ChiefDashboard = () => {
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Tableau de bord chef Département</h1>
         <p className="text-gray-600">
-        Suivez et gérez toutes les recommandations des départements
+          Suivez et gérez toutes les recommandations des départements
         </p>
       </div>
       
@@ -74,8 +80,14 @@ const ChiefDashboard = () => {
           color="secondary"
         />
         <StatsCard 
+          title="En attente"
+          value={pendingCount}
+          icon={<HourglassIcon className="h-5 w-5" />}
+          color="warning"
+        />
+        <StatsCard 
           title="Terminé"
-          value={completedCount}
+          value={confirmedCount}
           icon={<CheckCircle className="h-5 w-5" />}
           color="success"
         />
@@ -86,13 +98,7 @@ const ChiefDashboard = () => {
           color="error"
         />
         <StatsCard 
-          title="Départements"
-          value={departmentCount}
-          icon={<Building2 className="h-5 w-5" />}
-          color="accent"
-        />
-        <StatsCard 
-          title="Taux d’achèvement"
+          title="Taux d'achèvement"
           value={`${completionRate}%`}
           icon={<Users className="h-5 w-5" />}
           color="primary"
@@ -112,6 +118,9 @@ const ChiefDashboard = () => {
               recommendation={recommendation}
               department={getDepartmentById(recommendation.departmentId)}
               userName={getUserNameById(recommendation.userId)}
+              onUpdate={updateRecommendation}          // ← indispensable
+              onDelete={deleteRecommendation}          // ← indispensable
+              onStatusChange={updateRecommendationStatus}
             />
           ))}
           

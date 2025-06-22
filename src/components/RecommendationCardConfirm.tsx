@@ -20,7 +20,7 @@ interface RecommendationCardProps {
   recommendation: Recommendation;
   department?: Department | null;
   userName?: string;
-  onStatusChange?: (id: string, status: Recommendation['status'], completedAt?: string) => void;
+  onStatusChange?: (id: string, status: Recommendation['status'], confirmedAt?: string) => void;
   onUpdate?: (id: string, data: Partial<Recommendation>) => void;
   onDelete?: (id: string) => void;
   onConfirm?: (id: string) => void;
@@ -62,8 +62,8 @@ const RecommendationCard = ({
     if (onStatusChange) {
       setIsUpdating(true);
       try {
-        const completedAt = status === 'completed' ? new Date().toISOString() : undefined;
-        await onStatusChange(recommendation.id, status, completedAt);
+        const confirmedAt = status === 'confirmed' ? new Date().toISOString() : undefined;
+        await onStatusChange(recommendation.id, status, confirmedAt);
       } catch (error) {
         console.error('Failed to update status:', error);
       } finally {
@@ -233,10 +233,10 @@ const RecommendationCard = ({
             </div>
             
             {/* Completion Date */}
-            {recommendation.completedAt && (
+            {recommendation.confirmedAt && (
               <div className="flex items-center text-success-600">
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                <span>Terminé: {format(new Date(recommendation.completedAt), 'dd/MM/yyyy')}</span>
+                <span>Terminé: {format(new Date(recommendation.confirmedAt), 'dd/MM/yyyy')}</span>
               </div>
             )}
             
@@ -268,9 +268,9 @@ const RecommendationCard = ({
             )}
             
             {/* Status Change Buttons for non-pending recommendations */}
-            {!canConfirm && canEdit && recommendation.status !== 'completed' && (
+            {!canConfirm && canEdit && recommendation.status !== 'confirmed' && (
               <button 
-                onClick={() => handleStatusChange('completed')}
+                onClick={() => handleStatusChange('confirmed')}
                 disabled={isUpdating}
                 className="btn btn-sm btn-success flex-1 min-w-[120px]"
               >
@@ -279,8 +279,8 @@ const RecommendationCard = ({
               </button>
             )}
             
-            {/* Back to In Progress (for completed/confirmed items) */}
-            {canEdit && (recommendation.status === 'completed' || recommendation.status === 'confirmed') && (
+            {/* Back to In Progress (for confirmed/confirmed items) */}
+            {canEdit && (recommendation.status === 'confirmed' || recommendation.status === 'confirmed') && (
               <button 
                 onClick={() => handleStatusChange('in_progress')}
                 disabled={isUpdating}

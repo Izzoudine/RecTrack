@@ -47,19 +47,19 @@ const UserDashboard = () => {
     : null;
 
   // Get counts for dashboard stats
-  const completedCount = userRecommendations.filter(rec => rec.status === 'completed').length;
+  const confirmedCount = userRecommendations.filter(rec => rec.status === 'confirmed').length;
   const inProgressCount = userRecommendations.filter(rec => rec.status === 'in_progress').length;
   const overdueCount = userRecommendations.filter(rec => rec.status === 'overdue').length;
   const pendingCount = userRecommendations.filter(rec => rec.status === 'pending').length;
 
   // Calculate completion rate
   const completionRate = userRecommendations.length > 0 
-    ? Math.round((completedCount / userRecommendations.length) * 100) 
+    ? Math.round((confirmedCount / userRecommendations.length) * 100) 
     : 0;
 
-  // Sort recommendations by deadline (closest first) - excluding completed
+  // Sort recommendations by deadline (closest first) - excluding confirmed
   const sortedRecommendations = [...userRecommendations]
-    .filter(rec => rec.status !== 'completed')
+    .filter(rec => rec.status !== 'confirmed')
     .sort((a, b) => {
       const dateA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
       const dateB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
@@ -69,12 +69,12 @@ const UserDashboard = () => {
   // Pending recommendations
   const pendingRecommendations = userRecommendations.filter(rec => rec.status === 'pending');
 
-  // Recently completed recommendations
-  const recentlyCompleted = [...userRecommendations]
-    .filter(rec => rec.status === 'completed' && rec.completedAt)
+  // Recently confirmed recommendations
+  const recentlyconfirmed = [...userRecommendations]
+    .filter(rec => rec.status === 'confirmed' && rec.confirmedAt)
     .sort((a, b) => {
-      const dateA = new Date(a.completedAt || '');
-      const dateB = new Date(b.completedAt || '');
+      const dateA = new Date(a.confirmedAt || '');
+      const dateB = new Date(b.confirmedAt || '');
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, 3);
@@ -115,7 +115,7 @@ const UserDashboard = () => {
         />
         <StatsCard 
           title="Terminé"
-          value={completedCount}
+          value={confirmedCount}
           icon={<CheckCircle className="h-5 w-5" />}
           color="success"
         />
@@ -205,19 +205,19 @@ const UserDashboard = () => {
         </div>
       </div>
       
-      {/* Recently Completed */}
-      {recentlyCompleted.length > 0 && (
+      {/* Recently confirmed */}
+      {recentlyconfirmed.length > 0 && (
         <div className="max-w-6xl mx-auto">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 text-center">
             Récemment terminé
           </h2>
           
           <div className="bg-gray-50 rounded-lg border border-gray-200">
-            {recentlyCompleted.map((recommendation, index) => (
+            {recentlyconfirmed.map((recommendation, index) => (
               <div 
                 key={recommendation.id}
                 className={`p-4 flex items-center ${
-                  index < recentlyCompleted.length - 1 ? 'border-b border-gray-200' : ''
+                  index < recentlyconfirmed.length - 1 ? 'border-b border-gray-200' : ''
                 }`}
               >
                 <div className="bg-success-100 rounded-full p-2 mr-3 text-success-700">
@@ -226,7 +226,7 @@ const UserDashboard = () => {
                 <div>
                   <h3 className="font-medium text-gray-900">{recommendation.title}</h3>
                   <p className="text-xs text-gray-500">
-                    Terminé le {format(new Date(recommendation.completedAt!), 'MMM d, yyyy')}
+                    Terminé le {format(new Date(recommendation.confirmedAt!), 'MMM d, yyyy')}
                   </p>
                 </div>
               </div>

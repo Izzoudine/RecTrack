@@ -38,8 +38,8 @@ export interface Database {
           created_by: string
           department_id: string
           deadline: string
-          status: 'in_progress' | 'completed' | 'overdue'
-          completed_at: string | null
+          status: 'in_progress' | 'confirmed' | 'overdue'
+          confirmed_at: string | null
           created_at: string
         }
         Insert: {
@@ -50,8 +50,8 @@ export interface Database {
           created_by: string
           department_id: string
           deadline: string
-          status?: 'in_progress' | 'completed' | 'overdue'
-          completed_at?: string | null
+          status?: 'in_progress' | 'confirmed' | 'overdue'
+          confirmed_at?: string | null
           created_at?: string
         }
         Update: {
@@ -62,8 +62,8 @@ export interface Database {
           created_by?: string
           department_id?: string
           deadline?: string
-          status?: 'in_progress' | 'completed' | 'overdue'
-          completed_at?: string | null
+          status?: 'in_progress' | 'confirmed' | 'overdue'
+          confirmed_at?: string | null
           created_at?: string
         }
       }

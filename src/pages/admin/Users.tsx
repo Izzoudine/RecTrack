@@ -46,7 +46,7 @@ const AdminUsers = () => {
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {filteredUsers.map((user) => {
           const userRecommendations = getRecommendationsByUser(user.id);
-          const completedCount = userRecommendations.filter(rec => rec.status === 'completed').length;
+          const confirmedCount = userRecommendations.filter(rec => rec.status === 'confirmed').length;
           const inProgressCount = userRecommendations.filter(rec => rec.status === 'in_progress').length;
           const overdueCount = userRecommendations.filter(rec => rec.status === 'overdue').length;
 
@@ -82,7 +82,7 @@ const AdminUsers = () => {
                     <div className="bg-gray-50 p-2 rounded flex flex-col items-center">
                       <CheckCircle className="h-4 w-4 text-success-600 mb-1" />
                       <p className="text-xs text-gray-500">Terminé                      </p>
-                      <p className="text-sm font-semibold">{completedCount}</p>
+                      <p className="text-sm font-semibold">{confirmedCount}</p>
                     </div>
                     <div className="bg-gray-50 p-2 rounded flex flex-col items-center">
                       <AlertTriangle className="h-4 w-4 text-error-600 mb-1" />

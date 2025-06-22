@@ -9,29 +9,32 @@ const AdminDashboard = () => {
     recommendations, 
     departments, 
     users,
+    updateRecommendation,
+    deleteRecommendation,
+    updateRecommendationStatus,
     getRecommendationsByStatus 
   } = useAuth();
   
   const [recentRecommendations, setRecentRecommendations] = useState(
-    recommendations.filter(rec => rec.status !== 'completed').slice(0, 5)
+    recommendations.filter(rec => rec.status !== 'confirmed').slice(0, 5)
   );
   
   // Get counts for dashboard stats
   const totalRecommendations = recommendations.length;
-  const completedCount = getRecommendationsByStatus('completed').length;
+  const confirmedCount = getRecommendationsByStatus('confirmed').length;
   const inProgressCount = getRecommendationsByStatus('in_progress').length;
   const overdueCount = getRecommendationsByStatus('overdue').length;
   const departmentCount = departments.length;
   
   // Calculate completion rate
   const completionRate = totalRecommendations > 0 
-    ? Math.round((completedCount / totalRecommendations) * 100) 
+    ? Math.round((confirmedCount / totalRecommendations) * 100) 
     : 0;
   
   // Sort recommendations by deadline (most recent first)
   useEffect(() => {
     const sorted = [...recommendations]
-      .filter(rec => rec.status !== 'completed')
+      .filter(rec => rec.status !== 'confirmed')
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 5);
     
@@ -39,7 +42,7 @@ const AdminDashboard = () => {
   }, [recommendations]);
   
   // Helper function to get department by id
-  const getDepartmentById = (id: string) => {
+  const getDepartmentById = (id: string | null) => {
     return departments.find(dept => dept.id === id);
   };
   
@@ -74,7 +77,7 @@ const AdminDashboard = () => {
         />
         <StatsCard 
           title="Terminé"
-          value={completedCount}
+          value={confirmedCount}
           icon={<CheckCircle className="h-5 w-5" />}
           color="success"
         />
@@ -111,6 +114,9 @@ const AdminDashboard = () => {
               recommendation={recommendation}
               department={getDepartmentById(recommendation.departmentId)}
               userName={getUserNameById(recommendation.userId)}
+              onUpdate={updateRecommendation}          // ← indispensable
+              onDelete={deleteRecommendation}          // ← indispensable
+              onStatusChange={updateRecommendationStatus}
             />
           ))}
           
