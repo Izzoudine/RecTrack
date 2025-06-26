@@ -4,6 +4,7 @@ import RecommendationCardConfirm from "../../components/RecommendationCardConfir
 import {
   Search,
   Clock,
+  Filter,
 } from "lucide-react";
 
 const ChiefRecommendationsConfirm = () => {
@@ -20,10 +21,8 @@ const ChiefRecommendationsConfirm = () => {
     profile,
   } = useAuth();
 
-
   const [searchTerm, setSearchTerm] = useState("");
-
- 
+  const [departmentFilter, setDepartmentFilter] = useState("all"); // Added missing state
 
   // Get pending recommendations based on user role
   const getPendingRecommendationsForRole = () => {
@@ -62,8 +61,6 @@ const ChiefRecommendationsConfirm = () => {
     );
   }
 
-
-
   // Filter recommendations based on search term and department
   const filteredRecommendations = pendingRecommendations.filter((rec) => {
     const matchesSearch = searchTerm === "" ||
@@ -75,6 +72,7 @@ const ChiefRecommendationsConfirm = () => {
     
     return matchesSearch && matchesDepartment;
   });
+
   // Helper function to get department by id
   const getDepartmentById = (id: string | null | undefined) => {
     if (!id) return null;
@@ -86,7 +84,6 @@ const ChiefRecommendationsConfirm = () => {
     const user = chiefUsers.find((u: { id: string }) => u.id === id);
     return user ? user.name : "Utilisateur inconnu";
   };
-
 
   // Handle recommendation confirmation
   const handleConfirmRecommendation = async (id: string) => {
@@ -111,25 +108,26 @@ const ChiefRecommendationsConfirm = () => {
             } ({filteredRecommendations.length} en attente)
           </p>
         </div>
-
       </div>
 
       {/* Search and Filter */}
       <div className="mb-6 space-y-4">
-        <div className="relative max-w-xl mx-auto">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-4 max-w-4xl mx-auto">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Recherche des recommandations en attente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input pl-10 w-full"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Recherche des recommandations en attente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10 w-full"
-          />
+
         </div>
-
-
       </div>
 
       {/* Pending Recommendations Alert */}
@@ -159,7 +157,6 @@ const ChiefRecommendationsConfirm = () => {
             onUpdate={profile?.role === 'admin' ? updateRecommendation : undefined}
             onDelete={profile?.role === 'admin' ? deleteRecommendation : undefined}
             onConfirm={handleConfirmRecommendation}
-            
           />
         ))}
       </div>
@@ -180,8 +177,6 @@ const ChiefRecommendationsConfirm = () => {
           </p>
         </div>
       )}
-
-
     </div>
   );
 };

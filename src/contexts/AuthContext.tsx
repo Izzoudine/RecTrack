@@ -44,8 +44,8 @@ export type Mission = {
   departmentId: string | null;
   deadline: string | null;
   createdAt: string;
-  confirmedAt?: string | null;
-  status: 'active' | 'confirmed' | 'overdue';
+  completedAt?: string | null;
+  status: 'active' | 'completed' | 'overdue';
   
 };
 
@@ -58,8 +58,8 @@ export type Recommendation = {
   departmentId: string | null;
   missionId: string; // New field linking to mission
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
-  confirmedAt?: string;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
+  completedAt?: string;
   confirmedAt?: string;
   confirmedBy?: string;
 };
@@ -71,8 +71,8 @@ export type RecommendationResponse = {
   missionId: string;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
-  confirmedAt: string | null;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
+  completedAt: string | null;
   confirmedAt?: string | null;
   confirmedBy?: string | null;
   createdBy?: string;
@@ -99,8 +99,8 @@ interface MissionDoc {
   departmentId: string | null;
   deadline: string | null;
   createdAt: string;
-  confirmedAt?: string | null;
-  status: 'active' | 'confirmed' | 'overdue';
+  completedAt?: string | null;
+  status: 'active' | 'completed' | 'overdue';
 }
 
 interface RecommendationDoc {
@@ -109,8 +109,8 @@ interface RecommendationDoc {
   missionId: string;
   content: string;
   deadline: string | null;
-  status: 'in_progress' | 'pending' | 'confirmed' | 'confirmed' | 'overdue';
-  confirmedAt: string | null;
+  status: 'in_progress' | 'pending' | 'confirmed' | 'completed' | 'overdue';
+  completedAt: string | null;
   confirmedAt?: string | null;
   confirmedBy?: string | null;
 }
@@ -141,7 +141,7 @@ interface AuthContextType {
   addRecommendation: (recommendation: Omit<Recommendation, 'id' | 'status' | 'createdBy' | 'confirmedAt' | 'confirmedBy'>) => Promise<RecommendationResponse>;
   updateRecommendation: (id: string, data: Partial<Recommendation>) => Promise<void>;
   deleteRecommendation: (id: string) => Promise<void>;
-  updateRecommendationStatus: (id: string, status: Recommendation['status'], confirmedAt?: string) => Promise<void>;
+  updateRecommendationStatus: (id: string, status: Recommendation['status'], completedAt?: string) => Promise<void>;
   
   confirmRecommendation: (id: string) => Promise<void>;
   submitForConfirmation: (id: string) => Promise<void>;
@@ -402,7 +402,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               missionId: data.missionId,
               deadline: data.deadline || null,
               status: data.status,
-              confirmedAt: data.confirmedAt || undefined,
+              completedAt: data.completedAt || undefined,
               confirmedAt: data.confirmedAt || undefined,
               confirmedBy: confirmedByName,
             } as Recommendation;
@@ -469,7 +469,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               missionId: data.missionId,
               deadline: data.deadline || null,
               status: data.status,
-              confirmedAt: data.confirmedAt || undefined,
+              completedAt: data.completedAt || undefined,
               confirmedAt: data.confirmedAt || undefined,
               confirmedBy: confirmedByName,
             } as Recommendation;
@@ -568,7 +568,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         departmentId: newMission.departmentId || null,
         deadline: newMission.deadline || null,
         createdAt: new Date().toISOString(),
-        confirmedAt: null,
+        completedAt: null,
         status: 'active',
       };
 
@@ -583,7 +583,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         departmentId: newMission.departmentId || null,
         deadline: newMission.deadline || null,
         createdAt: missionDoc.createdAt,
-        confirmedAt: null,
+        completedAt: null,
         status: 'active',
       };
 
@@ -649,7 +649,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         content,
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
-        confirmedAt: null,
+        completedAt: null,
         confirmedAt: null,
         confirmedBy: null,
       };
@@ -663,7 +663,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         content,
         deadline: newRecommendation.deadline || null,
         status: 'in_progress',
-        confirmedAt: null,
+        completedAt: null,
         confirmedAt: null,
         confirmedBy: null,
         createdBy: userDoc.exists() ? (userDoc.data() as UserDoc).name : 'Inconnu',
@@ -676,39 +676,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateRecommendation = async (id: string, data: Partial<Recommendation>) => {
-    try {
-      console.log('Trying to update recommendation with id:', id);
-  
-      const updateData: Partial<RecommendationDoc> = {};
-  
-      if (data.title || data.description) {
-        const currentRec = recommendations.find(r => r.id === id);
-        const title = data.title ?? currentRec?.title ?? '';
-        const description = data.description ?? currentRec?.description ?? '';
-        updateData.content = `${title}\n${description}`.trim();
-      }
-  
-      if ('departmentId' in data) {
-        updateData.departmentId = data.departmentId || null;
-      }
-  
-      if ('missionId' in data) {
-        updateData.missionId = data.missionId!;
-      }
-  
-      if ('deadline' in data) {
-        updateData.deadline = data.deadline || null;
-      }
-  
-      await updateDoc(doc(db, 'recommendations', id), updateData);
-    } catch (err) {
-      console.error('Error updating recommendation:', err);
-      setError(err instanceof Error ? err.message : 'Échec de la mise à jour de la recommandation');
-      throw err;
+ const updateRecommendation = async (id: string, data: Partial<Recommendation>) => {
+  try {
+    console.log('Trying to update recommendation with id:', id);
+
+    const updateData: Partial<RecommendationDoc> = {};
+
+    if (data.title || data.description) {
+      const currentRec = recommendations.find(r => r.id === id);
+      const title = data.title ?? currentRec?.title ?? '';
+      const description = data.description ?? currentRec?.description ?? '';
+      updateData.content = `${title}\n${description}`.trim();
     }
-  };
-  
+
+    if ('departmentId' in data) {
+      updateData.departmentId = data.departmentId || null;
+    }
+
+    if ('missionId' in data) {
+      updateData.missionId = data.missionId!;
+    }
+
+    if ('deadline' in data) {
+      updateData.deadline = data.deadline || null;
+    }
+
+    await updateDoc(doc(db, 'recommendations', id), updateData);
+  } catch (err) {
+    console.error('Error updating recommendation:', err);
+    setError(err instanceof Error ? err.message : 'Échec de la mise à jour de la recommandation');
+    throw err;
+  }
+};
+
 
   const deleteRecommendation = async (id: string) => {
     try {
@@ -720,11 +720,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateRecommendationStatus = async (id: string, status: Recommendation['status'], confirmedAt?: string) => {
+  const updateRecommendationStatus = async (id: string, status: Recommendation['status'], completedAt?: string) => {
     try {
       const updateData: Partial<RecommendationDoc> = {
         status,
-        ...(confirmedAt !== undefined && { confirmedAt: confirmedAt || null }),
+        ...(completedAt !== undefined && { completedAt: completedAt || null }),
       };
       await updateDoc(doc(db, 'recommendations', id), updateData);
     } catch (err) {
